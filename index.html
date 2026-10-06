@@ -71,26 +71,26 @@ const $=id=>document.getElementById(id);
 const G1='Sans clé (compte Puter)',G2='Sans clé ni compte (Pollinations)',G3='Avec clé Gemini';
 const MODELS={
   text:[
-    {g:'Polyvalent, conversation',p:'chat',id:'gpt-5-chat-latest',l:'GPT-5 Chat',n:'Très bon généraliste : rédaction, explications, idées.'},
-    {g:'Polyvalent, conversation',p:'chat',id:'deepseek-chat',l:'DeepSeek Chat',n:'Bon en raisonnement, maths et rédaction.'},
-    {g:'Multilingue et code',p:'chat',id:'qwen/qwen3.6-plus',l:'Qwen 3.6 Plus',n:'Fort en langues et en programmation.'},
-    {g:'Agents et long texte',p:'chat',id:'moonshotai/kimi-k2',l:'Kimi K2',n:'Bon pour les tâches en plusieurs étapes et les longs textes.'},
-    {g:'Rapide et léger',p:'chat',id:'rekaai/reka-flash-3',l:'Reka Flash 3',n:'Réponses rapides pour les questions simples.'},
+    {g:'Polyvalent, conversation',p:'chat',ids:['openai/gpt-5-chat-latest','gpt-5-chat-latest','openai/gpt-5-mini','gpt-5-mini'],l:'GPT-5 Chat',n:'Très bon généraliste : rédaction, explications, idées.'},
+    {g:'Polyvalent, conversation',p:'chat',ids:['deepseek/deepseek-chat','deepseek-chat'],l:'DeepSeek Chat',n:'Bon en raisonnement, maths et rédaction.'},
+    {g:'Multilingue et code',p:'chat',ids:['qwen/qwen3.6-plus','qwen/qwen3-235b-a22b'],l:'Qwen 3.6 Plus',n:'Fort en langues et en programmation.'},
+    {g:'Agents et long texte',p:'chat',ids:['moonshotai/kimi-k2','moonshotai/kimi-k2:free'],l:'Kimi K2',n:'Bon pour les tâches en plusieurs étapes et les longs textes.'},
+    {g:'Rapide et léger',p:'chat',ids:['rekaai/reka-flash-3'],l:'Reka Flash 3',n:'Réponses rapides pour les questions simples.'},
     {g:G2,p:'poll',id:'',l:'Pollinations texte',n:'Sans compte, qualité moyenne, peut être indisponible.'},
     {g:G3,p:'gem',id:'gemini-2.5-flash',l:'Gemini 2.5 Flash',n:'Généraliste rapide, quotas gratuits.'},
     {g:G3,p:'gem',id:'gemini-2.5-flash-lite',l:'Gemini 2.5 Flash-Lite',n:'Plus léger, quotas plus larges.'}],
   img:[
-    {g:'Réalisme et texte lisible',p:'img',id:'gpt-image-1',o:{quality:'low'},l:'GPT Image 1',n:'Le plus fidèle au prompt, écrit bien du texte dans l\'image.'},
-    {g:'Réalisme et texte lisible',p:'img',id:'dall-e-3',l:'DALL·E 3',n:'Images soignées, bonne compréhension des scènes.'},
-    {g:'Créatif et retouche',p:'img',id:'gemini-2.5-flash-image-preview',l:'Gemini 2.5 Flash Image',n:'Créatif, cohérent sur plusieurs images.'},
-    {g:'Artistique',p:'img',id:'stabilityai/stable-diffusion-3-medium',l:'Stable Diffusion 3',n:'Style illustration et art numérique.'},
-    {g:'Rapide',p:'img',id:'black-forest-labs/flux-schnell',l:'Flux Schnell',n:'Très rapide, bon rapport qualité/vitesse.'},
+    {g:'Réalisme et texte lisible',p:'img',ids:['gpt-image-1-mini','openai/gpt-image-1-mini','gpt-image-1','openai/gpt-image-1'],o:{quality:'low'},l:'GPT Image 1',n:'Le plus fidèle au prompt, écrit bien du texte dans l\'image.'},
+    {g:'Réalisme et texte lisible',p:'img',ids:['openai/dall-e-3','dall-e-3'],l:'DALL·E 3',n:'Images soignées, bonne compréhension des scènes.'},
+    {g:'Créatif et retouche',p:'img',ids:['gemini-2.5-flash-image','google/gemini-2.5-flash-image','gemini-2.5-flash-image-preview'],l:'Gemini 2.5 Flash Image',n:'Créatif, cohérent sur plusieurs images.'},
+    {g:'Artistique',p:'img',ids:['stabilityai/stable-diffusion-3-medium'],l:'Stable Diffusion 3',n:'Style illustration et art numérique.'},
+    {g:'Rapide',p:'img',ids:['black-forest-labs/FLUX.1-schnell','black-forest-labs/flux-schnell'],l:'Flux Schnell',n:'Très rapide, bon rapport qualité/vitesse.'},
     {g:G2,p:'poll',id:'flux',l:'Pollinations Flux',n:'Sans compte, une image toutes les 15 s environ.'},
     {g:G2,p:'poll',id:'turbo',l:'Pollinations Turbo',n:'Sans compte, plus rapide, qualité moindre.'}],
   vid:[
-    {g:'Qualité cinéma',p:'vid',id:'kwaivgI/kling-2.1-master',l:'Kling 2.1 Master',n:'Réalisme et mouvements fluides, jusqu\'à 1080p. Coûte plus de crédits.'},
-    {g:'Qualité cinéma',p:'vid',id:'vidu/vidu-q1',l:'Vidu Q1',n:'Bonne qualité, bonne tenue du sujet.'},
-    {g:'Économique',p:'vid',id:'wan-ai/wan2.2-t2v-a14b',l:'Wan 2.2',n:'Clips de 5 s en 480p ou 720p, coût réduit.'},
+    {g:'Qualité cinéma',p:'vid',ids:['kwaivgI/kling-2.1-master'],l:'Kling 2.1 Master',n:'Réalisme et mouvements fluides, jusqu\'à 1080p. Coûte plus de crédits.'},
+    {g:'Qualité cinéma',p:'vid',ids:['vidu/vidu-q1'],l:'Vidu Q1',n:'Bonne qualité, bonne tenue du sujet.'},
+    {g:'Économique',p:'vid',ids:['wan-ai/wan2.2-t2v-a14b'],l:'Wan 2.2',n:'Clips de 5 s en 480p ou 720p, coût réduit.'},
     {g:G3,p:'veo',id:'veo-3.0-fast-generate-001',l:'Veo 3 Fast (payant)',n:'Demande une clé Gemini avec facturation.'}]
 };
 const tabs=['text','img','vid','set'];
@@ -109,6 +109,17 @@ tabs.forEach(t=>$('t-'+t).onclick=()=>show(t));
   s.onchange=()=>{store('sel2-'+t,s.value);note()};
   note();
 });
+async function tryIds(m,fn){
+  const list=m.ids||[m.id];let last;
+  for(const id of list){
+    try{return await fn(id)}catch(e){
+      const msg=String(e&&(e.message||(e.error&&e.error.message))||JSON.stringify(e));
+      last=e;
+      if(!/not found|unknown model|invalid model|no such model/i.test(msg))throw e;
+    }
+  }
+  throw new Error('Ce modèle n\'est plus disponible sur Puter. Choisis-en un autre.');
+}
 function pick(t){return MODELS[t][+$('m-'+t).value]||MODELS[t][0]}
 
 $('key').value=store('gkey');
@@ -127,7 +138,7 @@ $('g-text').onclick=async()=>{
   const b=$('g-text');b.disabled=true;out('<span class="m">Génération…</span>');
   try{
     if(m.p==='chat'){
-      const r=await puter.ai.chat(p,{model:m.id});
+      const r=await tryIds(m,id=>puter.ai.chat(p,{model:id}));
       let t=typeof r==='string'?r:(r&&r.message&&r.message.content)||'';
       if(Array.isArray(t))t=t.map(x=>x.text||'').join('');
       if(!t)throw new Error('Réponse vide, essaie un autre modèle.');
@@ -154,7 +165,7 @@ $('g-img').onclick=async()=>{
   const b=$('g-img');b.disabled=true;out('<span class="m">Génération (10 à 40 s)…</span>');
   try{
     if(m.p==='img'){
-      const im=await puter.ai.txt2img(p,Object.assign({model:m.id},m.o||{}));
+      const im=await tryIds(m,id=>puter.ai.txt2img(p,Object.assign({model:id},m.o||{})));
       node(im);
     }else{
       const u='https://image.pollinations.ai/prompt/'+encodeURIComponent(p)+'?width=1024&height=1024&nologo=true&model='+m.id+'&seed='+Math.floor(Math.random()*1e6);
@@ -170,7 +181,7 @@ $('g-vid').onclick=async()=>{
   const b=$('g-vid');b.disabled=true;out('<span class="m">Création en cours (1 à 5 min)…</span>');
   try{
     if(m.p==='vid'){
-      const v=await puter.ai.txt2vid(p,{model:m.id});
+      const v=await tryIds(m,id=>puter.ai.txt2vid(p,{model:id}));
       v.controls=true;v.setAttribute('playsinline','');node(v);
     }else{
       const H={'Content-Type':'application/json','x-goog-api-key':store('gkey')};
