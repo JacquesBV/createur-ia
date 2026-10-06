@@ -27,6 +27,9 @@ img,video{max-width:100%;border-radius:10px;display:block}
 .m{color:var(--mut);font-size:14px;margin:0}
 .warn{color:var(--warn)}
 .row{display:flex;gap:8px}
+ol{margin:6px 0 0 18px;padding:0}
+iframe{width:100%;height:360px;border:1px solid var(--line);border-radius:10px;background:#fff;margin-top:8px}
+.card h3{margin:0 0 6px;font-size:16px}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -36,6 +39,7 @@ img,video{max-width:100%;border-radius:10px;display:block}
   <button id="t-text" class="on">Texte</button>
   <button id="t-img">Image</button>
   <button id="t-vid">Vidéo</button>
+  <button id="t-agent">Agent</button>
   <button id="t-set">Infos</button>
 </nav>
 
@@ -54,6 +58,11 @@ img,video{max-width:100%;border-radius:10px;display:block}
   <textarea id="i-vid" placeholder="Décris la vidéo (l'anglais donne de meilleurs résultats)…"></textarea>
   <button class="go" id="g-vid">Générer la vidéo</button>
   <p class="m" style="margin-top:8px">Une vidéo prend de 1 à 5 minutes.</p>
+</section>
+<section id="p-agent" class="card" hidden>
+  <p class="m">Donne un objectif : l'agent fait un plan, puis écrit, génère des images et construit des pages tout seul, étape par étape. Il n'a pas de recherche web ni de terminal.</p>
+  <textarea id="i-agent" placeholder="Ex : crée une page de présentation pour mon jeu de tir spatial, avec un logo et un texte d'accroche"></textarea>
+  <button class="go" id="g-agent">Lancer l'agent</button>
 </section>
 <section id="p-set" class="card" hidden>
   <p class="m"><b>Mode Auto</b> (recommandé) : l'app essaie plusieurs services l'un après l'autre et n'affiche une erreur que si tous échouent.</p>
@@ -185,12 +194,12 @@ const cur=t=>(C[t].entries[+$('m-'+t).value]||C[t].entries[0])[1];
 
 if(hasPuter()&&puter.ai.listModels){
   puter.ai.listModels().then(list=>{
-    const fav=/gpt-5|deepseek-chat|qwen3|kimi-k2|claude|gemini-2\.5-flash$/i;
+    const fav=/gpt-5|deepseek-chat|qwen3|kimi-k2|claude|mistral|llama|grok|glm|gemini-[23]/i;
     const ok=x=>!/embed|moderation|tts|whisper|image|audio|video/i.test(x.id);
     const ents=list.filter(ok).sort((a,b)=>String(a.provider).localeCompare(String(b.provider)));
-    const star=ents.filter(x=>fav.test(x.id)).slice(0,8).map(x=>['Puter : recommandés',ptext([x.id],x.name||x.id)]);
+    const star=ents.filter(x=>fav.test(x.id)).slice(0,14).map(x=>['Puter : recommandés',ptext([x.id],x.name||x.id)]);
     const used=new Set(star.map(e=>e[1].l));
-    const rest=ents.filter(x=>!used.has(x.name||x.id)).slice(0,70).map(x=>['Puter : '+(x.provider||'divers'),ptext([x.id],x.name||x.id)]);
+    const rest=ents.filter(x=>!used.has(x.name||x.id)).slice(0,300).map(x=>['Puter : '+(x.provider||'divers'),ptext([x.id],x.name||x.id)]);
     C.text.list=[C.text.list[0],...star,...rest,C.text.list[1],C.text.list[2],C.text.list[3]];
     C.text.entries=[['Recommandé',AUTO_ENTRY]].concat(C.text.list);
     AUTO.text=()=>[C.text.list[0][1],polltext,...(gkey()?[C.text.list[C.text.list.length-2][1]]:[])];
@@ -199,7 +208,7 @@ if(hasPuter()&&puter.ai.listModels){
 }
 
 /* ---------- interface ---------- */
-const tabs=['text','img','vid','set'];
+const tabs=['text','img','vid','agent','set'];
 function show(n){tabs.forEach(t=>{$('p-'+t).hidden=t!==n;$('t-'+t).classList.toggle('on',t===n)});$('res').hidden=true}
 tabs.forEach(t=>$('t-'+t).onclick=()=>show(t));
 $('key').value=gkey();
@@ -247,6 +256,68 @@ async function generate(t){
   b.disabled=false;
 }
 ['text','img','vid'].forEach(t=>$('g-'+t).onclick=()=>generate(t));
+
+/* ---------- mode agent ---------- */
+async function attempt(t,p,say){
+  let last='';
+  for(const m of AUTO[t]()){
+    if(m.key&&!gkey())continue;
+    if(m.puter&&puterBlocked)continue;
+    if(say)say(m.l+'…');
+    try{return {r:await m.run(p),label:m.l}}catch(e){last=human(e)}
+  }
+  throw new Error(last||'aucun service disponible');
+}
+function parsePlan(t){
+  const m=String(t).match(/\{[\s\S]*\}/);
+  try{const j=JSON.parse(m[0]);if(Array.isArray(j.steps)&&j.steps.length)return j.steps.slice(0,4)}catch(e){}
+  return null;
+}
+async function runAgent(){
+  const goal=$('i-agent').value.trim();if(!goal)return;
+  const b=$('g-agent');b.disabled=true;
+  $('res').hidden=false;const log=$('out');log.innerHTML='';
+  const add=h=>{const d=document.createElement('div');d.style.cssText='border-top:1px solid var(--line);padding:10px 0';d.innerHTML=h;log.appendChild(d);d.scrollIntoView({behavior:'smooth',block:'end'});return d};
+  const memo=[];
+  try{
+    const pl=add('<h3>Plan</h3><p class="m">Réflexion…</p>');
+    const q='Tu es un agent qui accomplit un objectif en plusieurs étapes. Objectif : "'+goal+'". Réponds UNIQUEMENT avec du JSON de la forme {"steps":[{"type":"text","title":"titre court","prompt":"consigne précise"}]}. Maximum 4 étapes. Types possibles : "text" (rédaction, analyse, idées), "image" (illustration, prompt en anglais), "page" (site ou outil web en une seule page HTML). N\'écris rien d\'autre que le JSON.';
+    const {r}=await attempt('text',q,x=>{pl.querySelector('p').textContent=x});
+    const steps=parsePlan(r.text)||[{type:'text',title:'Réponse',prompt:goal}];
+    pl.innerHTML='<h3>Plan</h3><ol>'+steps.map(s=>'<li>'+esc(s.title||s.type)+'</li>').join('')+'</ol>';
+    for(let i=0;i<steps.length;i++){
+      const s=steps[i],type=['image','page'].includes(s.type)?s.type:'text';
+      const c=add('<h3>'+(i+1)+'. '+esc(s.title||type)+'</h3><p class="m">En cours…</p>');
+      const say=x=>{const p=c.querySelector('p.m');if(p)p.textContent=x};
+      const ctx=memo.length?'\n\nRésultats des étapes précédentes :\n'+memo.join('\n---\n'):'';
+      try{
+        if(type==='image'){
+          const {r:im,label}=await attempt('img',s.prompt||goal,say);
+          c.querySelector('p.m').remove();c.appendChild(im.el);
+          c.insertAdjacentHTML('beforeend','<p class="m" style="margin-top:6px">Généré avec : '+esc(label)+'</p>');
+          memo.push('['+(s.title||'image')+' : image générée]');
+        }else if(type==='page'){
+          const {r:tx,label}=await attempt('text','Objectif global : "'+goal+'". Consigne : '+(s.prompt||goal)+ctx+'\n\nÉcris UNE page HTML complète, responsive, avec CSS et JavaScript intégrés et aucune ressource externe. Réponds avec le code seul, sans explication.',say);
+          const html=tx.text.replace(/^[\s\S]*?```(?:html)?\s*/i,m=>/```/.test(m)?'':m).replace(/```[\s\S]*$/,'').trim();
+          c.querySelector('p.m').remove();
+          const f=document.createElement('iframe');f.setAttribute('sandbox','allow-scripts');f.srcdoc=html;c.appendChild(f);
+          const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));a.download='page.html';a.textContent='Télécharger la page';a.style.cssText='display:block;margin-top:8px;color:var(--acc)';c.appendChild(a);
+          c.insertAdjacentHTML('beforeend','<p class="m" style="margin-top:6px">Généré avec : '+esc(label)+'</p>');
+          memo.push('['+(s.title||'page')+' : page HTML créée]');
+        }else{
+          const {r:tx,label}=await attempt('text','Objectif global : "'+goal+'". Étape : '+(s.prompt||goal)+ctx+'\n\nRéponds en français, de façon directe et utile.',say);
+          c.querySelector('p.m').remove();
+          const d=document.createElement('div');d.style.whiteSpace='pre-wrap';d.textContent=tx.text.text||tx.text;c.appendChild(d);
+          c.insertAdjacentHTML('beforeend','<p class="m" style="margin-top:6px">Généré avec : '+esc(label)+'</p>');
+          memo.push('['+(s.title||'texte')+'] '+String(tx.text).slice(0,1200));
+        }
+      }catch(e){c.innerHTML='<h3>'+(i+1)+'. '+esc(s.title||type)+'</h3><p class="warn">Étape ignorée : '+esc(human(e))+'</p>'}
+    }
+    add('<p class="m">Terminé.</p>');
+  }catch(e){add('<p class="warn">L\'agent n\'a pas pu démarrer : '+esc(human(e))+'. Connecte-toi à Puter dans Infos, puis réessaie.</p>')}
+  b.disabled=false;
+}
+$('g-agent').onclick=runAgent;
 </script>
 </body>
 </html>
