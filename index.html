@@ -64,6 +64,10 @@ ol{margin:6px 0 0 18px;padding:0}
 .bn svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .bn button.on{background:var(--gold);color:#1b2a3a}
 select,textarea,input{font-size:16px}
+.bn button{font-size:13px}
+.bub{max-width:90%;padding:10px 12px;border:2px solid var(--edge);border-radius:14px;margin-bottom:10px;box-shadow:0 2px 0 var(--edge)}
+.bub.u{margin-left:auto;background:var(--gold);color:#1b2a3a}
+.bub.a{background:var(--s)}
 .sec{min-height:42px}
 .acts .sec{flex:1 1 auto}
 .go{min-height:52px}
@@ -92,6 +96,16 @@ select,textarea,input{font-size:16px}
     <button class="go" id="go">Générer</button>
   </div>
   <div id="result"></div>
+</section>
+<section id="v-chat" hidden>
+  <div class="acts" style="margin:0 0 12px"><select id="cm" style="flex:2;margin:0"></select><button class="sec" id="cnew">Nouveau chat</button></div>
+  <div id="cmsgs"><p class="m" id="cempty">Pose ta première question : la conversation reste en mémoire jusqu'à « Nouveau chat ».</p></div>
+  <div class="card">
+    <textarea id="cin" style="min-height:64px" placeholder="Écris ton message…"></textarea>
+    <div class="acts" style="margin:0 0 10px"><button class="sec" id="cmic">Dicter</button><label class="sec" style="display:inline-block;margin:0;font-size:16px;color:var(--ink)">Image<input type="file" id="catt" accept="image/*" hidden></label></div>
+    <p class="m" id="catn" hidden style="cursor:pointer;text-decoration:underline"></p>
+    <button class="go" id="csend">Envoyer</button>
+  </div>
 </section>
 <section id="v-agent" hidden>
   <div class="card">
@@ -133,7 +147,7 @@ select,textarea,input{font-size:16px}
 </section>
 </main>
 <nav class="bn">
-  <button id="nb-create" class="on"><svg viewBox="0 0 24 24"><path d='M12 2v5M12 17v5M2 12h5M17 12h5M5 5l3.5 3.5M15.5 15.5L19 19M19 5l-3.5 3.5M8.5 15.5L5 19'/><circle cx='12' cy='12' r='3'/><circle cx='12' cy='12' r='7'/></svg><span>Pont</span></button><button id="nb-agent"><svg viewBox="0 0 24 24"><path d='M12 3c-4 0-7 2.6-7 6.2 0 2 1 3.6 2.5 4.6V16h9v-2.2c1.5-1 2.5-2.600 2.5-4.600C19 5.600 16 3 12 3z'/><circle cx='9' cy='9.500' r='1.300'/><circle cx='15' cy='9.500' r='1.300'/><path d='M5 21l14-4M19 21L5 17'/></svg><span>Équipage</span></button><button id="nb-hist"><svg viewBox="0 0 24 24"><path d='M6 3h12v18H6z'/><path d='M6 3v18M10 8h5M10 12h5M10 16h3'/></svg><span>Journal</span></button><button id="nb-files"><svg viewBox="0 0 24 24"><path d='M3 11a9 9 0 0 1 18 0v9H3z'/><path d='M3 12h18'/><rect x='10' y='12' width='4' height='4' rx='1'/></svg><span>Trésor</span></button><button id="nb-set"><svg viewBox="0 0 24 24"><circle cx='12' cy='12' r='9'/><path d='M15.500 8.500l-2 5-5 2 2-5z'/></svg><span>Boussole</span></button>
+  <button id="nb-create" class="on"><svg viewBox="0 0 24 24"><path d='M12 2v5M12 17v5M2 12h5M17 12h5M5 5l3.5 3.5M15.5 15.5L19 19M19 5l-3.5 3.5M8.5 15.5L5 19'/><circle cx='12' cy='12' r='3'/><circle cx='12' cy='12' r='7'/></svg><span>Pont</span></button><button id="nb-chat"><svg viewBox="0 0 24 24"><path d='M4 5h16v11H9l-5 4z'/><path d='M8 9h8M8 12h5'/></svg><span>Chat</span></button><button id="nb-agent"><svg viewBox="0 0 24 24"><path d='M12 3c-4 0-7 2.6-7 6.2 0 2 1 3.6 2.5 4.6V16h9v-2.2c1.5-1 2.5-2.600 2.5-4.600C19 5.600 16 3 12 3z'/><circle cx='9' cy='9.500' r='1.300'/><circle cx='15' cy='9.500' r='1.300'/><path d='M5 21l14-4M19 21L5 17'/></svg><span>Équipage</span></button><button id="nb-hist"><svg viewBox="0 0 24 24"><path d='M6 3h12v18H6z'/><path d='M6 3v18M10 8h5M10 12h5M10 16h3'/></svg><span>Journal</span></button><button id="nb-files"><svg viewBox="0 0 24 24"><path d='M3 11a9 9 0 0 1 18 0v9H3z'/><path d='M3 12h18'/><rect x='10' y='12' width='4' height='4' rx='1'/></svg><span>Trésor</span></button><button id="nb-set"><svg viewBox="0 0 24 24"><circle cx='12' cy='12' r='9'/><path d='M15.500 8.500l-2 5-5 2 2-5z'/></svg><span>Boussole</span></button>
 </nav>
 <script>
 
@@ -357,13 +371,14 @@ function showItem(it,box,bare){
   if(it.type==='text')a.appendChild(btn('Copier',b=>{try{navigator.clipboard.writeText(it.text);b.textContent='Copié'}catch(e){b.textContent='Copie impossible'}}));
   if(it.type==='text'&&window.speechSynthesis)a.appendChild(btn('Lire',b=>{const ss=speechSynthesis;if(ss.speaking){ss.cancel();b.textContent='Lire';return}
     const u=new SpeechSynthesisUtterance(it.text.slice(0,4000));u.lang='fr-FR';u.onend=()=>{b.textContent='Lire'};b.textContent='Stop';ss.speak(u)}));
+  a.appendChild(btn('Supprimer',async()=>{await dbDel(it.id);c.remove();updateCount()}));
   c.appendChild(a);c.appendChild(mk('p','m','Généré avec '+it.model));
   box.appendChild(c);c.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
 /* ---------- navigation ---------- */
-const VIEWS=['create','agent','hist','files','set'];
-function go(v){VIEWS.forEach(x=>{$('v-'+x).hidden=x!==v;$('nb-'+x).classList.toggle('on',x===v)});if(v==='hist')renderHist();if(v==='files')renderFiles();window.scrollTo(0,0)}
+const VIEWS=['create','chat','agent','hist','files','set'];
+function go(v){VIEWS.forEach(x=>{$('v-'+x).hidden=x!==v;$('nb-'+x).classList.toggle('on',x===v)});if(v==='hist')renderHist();if(v==='files')renderFiles();if(v==='chat')buildChat();window.scrollTo(0,0)}
 VIEWS.forEach(v=>$('nb-'+v).onclick=()=>go(v));
 let ctype='text';
 const PH={text:'Écris ce que tu veux générer…',img:'Décris l\'image (l\'anglais donne de meilleurs résultats)…',vid:'Décris la vidéo (l\'anglais donne de meilleurs résultats). Compte 1 à 5 minutes.'};
@@ -420,6 +435,40 @@ async function generate(){
 }
 $('go').onclick=generate;
 
+/* ---------- chat ---------- */
+let cmsgs=[],CATT=null,CATTM='';
+function buildChat(){const k=$('cm').value;if(!$('cm').options.length||$('cm').dataset.n!=$('m-text').options.length){$('cm').innerHTML=$('m-text').innerHTML;$('cm').value=$('m-text').value;$('cm').dataset.n=$('m-text').options.length}else if(k)$('cm').value=k}
+const cbub=(r,t,m)=>{$('cempty').hidden=true;const d=mk('div','bub '+r);d.appendChild(mk('div','txt',t));if(m)d.appendChild(mk('div','m',m));$('cmsgs').appendChild(d);d.scrollIntoView({behavior:'smooth',block:'nearest'});return d};
+$('cnew').onclick=()=>{cmsgs=[];$('cmsgs').querySelectorAll('.bub').forEach(x=>x.remove());$('cempty').hidden=false;$('cin').value=''};
+$('cmic').onclick=()=>{if(!SR){$('cmic').textContent='Dictée non supportée ici';return}
+  const r=new SR();r.lang='fr-FR';r.interimResults=false;$('cmic').textContent='J\'écoute…';
+  r.onresult=e=>{const q=$('cin');q.value+=(q.value?' ':'')+e.results[0][0].transcript};
+  r.onend=r.onerror=()=>{$('cmic').textContent='Dicter'};r.start()};
+$('catt').onchange=e=>{const f=e.target.files[0];if(!f)return;const fr=new FileReader();
+  fr.onload=()=>{CATT=fr.result;CATTM=f.type;$('catn').hidden=false;$('catn').textContent='Image jointe : '+f.name+' (touche ici pour retirer)'};fr.readAsDataURL(f)};
+$('catn').onclick=()=>{CATT=null;$('catt').value='';$('catn').hidden=true};
+async function csend(){
+  const p=$('cin').value.trim();if(!p)return;const b=$('csend');b.disabled=true;
+  const sel=(C.text.entries[+$('cm').value]||C.text.entries[0])[1],sA=ATT,sM=ATTM;
+  ATT=CATT;ATTM=CATTM;VIS=!!CATT;
+  cbub('u',p+(CATT?'  [image jointe]':''));$('cin').value='';
+  const h=cmsgs.slice(-10).map(x=>(x.r==='u'?'Utilisateur : ':'Assistant : ')+x.t).join('\n');
+  const q=h?'Conversation précédente :\n'+h+'\n\nRéponds au dernier message de l\'utilisateur.\nUtilisateur : '+p:p;
+  let chain=sel.auto?AUTO.text():[sel];if(VIS)chain=chain.filter(m=>m.vis);
+  const w=cbub('a','…');let ok=false,last='';
+  for(const m of chain){
+    if(m.key&&!hk(m)){last=m.l+' : clé manquante (Réglages)';continue}
+    if(m.puter&&puterBlocked){last='connexion Puter annulée (Réglages)';continue}
+    if(chain.length>1&&(cool[m.l]||0)>Date.now())continue;
+    w.firstChild.textContent='… '+m.l;
+    try{const r=await runR(m,q);cmsgs.push({r:'u',t:p},{r:'a',t:r.text});w.firstChild.textContent=r.text;w.appendChild(mk('div','m',m.l));
+      save('text',p,m.l,r,'chat');ok=true;break}catch(e){last=m.l+' : '+human(e)}
+  }
+  if(!ok){w.firstChild.textContent='Échec. '+(last||'Aucun modèle disponible.')+(VIS&&!chain.length?' Pour une image, choisis un modèle Puter ou Gemini.':'');w.classList.add('warn')}
+  CATT=null;$('catn').hidden=true;$('catt').value='';ATT=sA;ATTM=sM;VIS=false;b.disabled=false;
+}
+$('csend').onclick=csend;
+
 /* ---------- historique ---------- */
 const fmt=ts=>new Date(ts).toLocaleString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
 async function renderHist(){
@@ -429,7 +478,7 @@ async function renderHist(){
   all.forEach(it=>{
     const r=mk('div','row'),hd=mk('div','hd'),inf=mk('div');
     hd.appendChild(mk('span','bdg',BADGE[it.type]));inf.appendChild(mk('div','pr',it.prompt));
-    inf.appendChild(mk('div','m',fmt(it.ts)+' · '+it.model+(it.group?' · agent':'')));hd.appendChild(inf);r.appendChild(hd);
+    inf.appendChild(mk('div','m',fmt(it.ts)+' · '+it.model+(it.group?(it.group==='chat'?' · chat':' · agent'):'')));hd.appendChild(inf);r.appendChild(hd);
     const bd=mk('div','bd');bd.hidden=true;let open=false;
     hd.onclick=()=>{open=!open;bd.hidden=!open;if(open&&!bd.firstChild){bd.appendChild(renderItem(it));
       const a=mk('div','acts');a.appendChild(btn('Télécharger',()=>dl(it),'pri'));
