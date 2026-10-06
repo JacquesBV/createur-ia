@@ -80,11 +80,14 @@ const MODELS={
     {g:G3,p:'gem',id:'gemini-2.5-flash',l:'Gemini 2.5 Flash',n:'Généraliste rapide, quotas gratuits.'},
     {g:G3,p:'gem',id:'gemini-2.5-flash-lite',l:'Gemini 2.5 Flash-Lite',n:'Plus léger, quotas plus larges.'}],
   img:[
-    {g:'Réalisme et texte lisible',p:'img',ids:['gpt-image-1-mini','openai/gpt-image-1-mini','gpt-image-1','openai/gpt-image-1'],o:{quality:'low'},l:'GPT Image 1',n:'Le plus fidèle au prompt, écrit bien du texte dans l\'image.'},
-    {g:'Réalisme et texte lisible',p:'img',ids:['openai/dall-e-3','dall-e-3'],l:'DALL·E 3',n:'Images soignées, bonne compréhension des scènes.'},
-    {g:'Créatif et retouche',p:'img',ids:['gemini-2.5-flash-image','google/gemini-2.5-flash-image','gemini-2.5-flash-image-preview'],l:'Gemini 2.5 Flash Image',n:'Créatif, cohérent sur plusieurs images.'},
+    {g:'Recommandé',p:'img',ids:[null],l:'Défaut Puter (le plus fiable)',n:'Le modèle choisi par Puter, sans nom à deviner.'},
+    {g:'Réalisme et texte lisible',p:'img',ids:['gpt-image-1.5'],o:{quality:'low'},l:'GPT Image 1.5',n:'Le plus fidèle au prompt, écrit bien du texte dans l\'image.'},
+    {g:'Réalisme et texte lisible',p:'img',ids:['gpt-image-1-mini'],o:{quality:'low'},l:'GPT Image 1 Mini',n:'Version économique de GPT Image.'},
+    {g:'Réalisme et texte lisible',p:'img',ids:['dall-e-3','openai/dall-e-3'],l:'DALL·E 3',n:'Images soignées, bonne compréhension des scènes.'},
+    {g:'Créatif et retouche',p:'img',ids:['gemini-3-pro-image','gemini-3-pro-image-preview','gemini-3.1-flash-image-preview','gemini-2.5-flash-image-preview'],l:'Gemini Image (Nano Banana)',n:'Créatif, cohérent sur plusieurs images.'},
     {g:'Artistique',p:'img',ids:['stabilityai/stable-diffusion-3-medium'],l:'Stable Diffusion 3',n:'Style illustration et art numérique.'},
     {g:'Rapide',p:'img',ids:['black-forest-labs/FLUX.1-schnell','black-forest-labs/flux-schnell'],l:'Flux Schnell',n:'Très rapide, bon rapport qualité/vitesse.'},
+    {g:'Rapide',p:'img',ids:['rundiffusion/juggernaut-lightning-flux'],l:'Juggernaut Lightning Flux',n:'Rapide, rendu photo détaillé.'},
     {g:G2,p:'poll',id:'flux',l:'Pollinations Flux',n:'Sans compte, une image toutes les 15 s environ.'},
     {g:G2,p:'poll',id:'turbo',l:'Pollinations Turbo',n:'Sans compte, plus rapide, qualité moindre.'}],
   vid:[
@@ -98,17 +101,36 @@ function store(k,v){try{if(v===undefined)return localStorage.getItem(k)||'';loca
 function show(n){tabs.forEach(t=>{$('p-'+t).hidden=t!==n;$('t-'+t).classList.toggle('on',t===n)});$('res').hidden=true}
 tabs.forEach(t=>$('t-'+t).onclick=()=>show(t));
 
-['text','img','vid'].forEach(t=>{
+function buildSelect(t){
   const s=$('m-'+t),groups={};
+  s.innerHTML='';
   MODELS[t].forEach((m,i)=>{
     if(!groups[m.g]){groups[m.g]=document.createElement('optgroup');groups[m.g].label=m.g;s.appendChild(groups[m.g])}
     groups[m.g].appendChild(new Option(m.l,i));
   });
   const note=()=>{$('n-'+t).textContent=pick(t).n};
-  s.value=store('sel2-'+t)||0;
-  s.onchange=()=>{store('sel2-'+t,s.value);note()};
+  const k=MODELS[t].findIndex(m=>m.l===store('sel3-'+t));
+  s.value=k>=0?k:0;
+  s.onchange=()=>{store('sel3-'+t,pick(t).l);note()};
   note();
-});
+}
+['text','img','vid'].forEach(buildSelect);
+
+if(typeof puter!=='undefined'&&puter.ai&&puter.ai.listModels){
+  puter.ai.listModels().then(list=>{
+    const ids=new Set();
+    list.forEach(x=>{ids.add(x.id);(x.aliases||[]).forEach(a=>ids.add(a))});
+    const rest=MODELS.text.filter(m=>m.p!=='chat');
+    const cur=MODELS.text.filter(m=>m.p==='chat').map(m=>{const f=m.ids.find(i=>ids.has(i));return f?Object.assign({},m,{ids:[f]}):null}).filter(Boolean);
+    const used=new Set(cur.map(m=>m.ids[0]));
+    const others=list.filter(x=>!used.has(x.id)&&!/embed|moderation|tts|whisper|image|audio|vision-only/i.test(x.id))
+      .sort((a,b)=>String(a.provider).localeCompare(String(b.provider)))
+      .slice(0,80)
+      .map(x=>({g:'Autres modèles ('+(x.provider||'divers')+')',p:'chat',ids:[x.id],l:x.name||x.id,n:'Modèle '+(x.provider||'')+' disponible sur Puter.'}));
+    if(cur.length+others.length){MODELS.text=cur.concat(others,rest);buildSelect('text')}
+  }).catch(()=>{});
+}
+
 async function tryIds(m,fn){
   const list=m.ids||[m.id];let last;
   for(const id of list){
@@ -118,7 +140,7 @@ async function tryIds(m,fn){
       if(!/not found|unknown model|invalid model|no such model/i.test(msg))throw e;
     }
   }
-  throw new Error('Ce modèle n\'est plus disponible sur Puter. Choisis-en un autre.');
+  throw new Error('Modèle indisponible sur Puter ('+String(last&&(last.message||(last.error&&last.error.message))||'')+'). Essaie « Défaut Puter » ou un autre modèle.');
 }
 function pick(t){return MODELS[t][+$('m-'+t).value]||MODELS[t][0]}
 
@@ -165,7 +187,7 @@ $('g-img').onclick=async()=>{
   const b=$('g-img');b.disabled=true;out('<span class="m">Génération (10 à 40 s)…</span>');
   try{
     if(m.p==='img'){
-      const im=await tryIds(m,id=>puter.ai.txt2img(p,Object.assign({model:id},m.o||{})));
+      const im=await tryIds(m,id=>puter.ai.txt2img(p,Object.assign(id?{model:id}:{},m.o||{})));
       node(im);
     }else{
       const u='https://image.pollinations.ai/prompt/'+encodeURIComponent(p)+'?width=1024&height=1024&nologo=true&model='+m.id+'&seed='+Math.floor(Math.random()*1e6);
