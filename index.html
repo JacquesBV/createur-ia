@@ -63,6 +63,11 @@ ol{margin:6px 0 0 18px;padding:0}
 .bn button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;color:var(--mut);padding:6px 0;border-radius:12px;font-size:15px;line-height:1.1}
 .bn svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .bn button.on{background:var(--gold);color:#1b2a3a}
+select,textarea,input{font-size:16px}
+.sec{min-height:42px}
+.acts .sec{flex:1 1 auto}
+.go{min-height:52px}
+#attn{cursor:pointer;text-decoration:underline}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -78,6 +83,12 @@ ol{margin:6px 0 0 18px;padding:0}
     <select id="m-text"></select><select id="m-img" hidden></select><select id="m-vid" hidden></select>
     <p class="m" id="n-text"></p><p class="m" id="n-img" hidden></p><p class="m" id="n-vid" hidden></p>
     <textarea id="prompt"></textarea>
+    <div class="acts" style="margin:-4px 0 12px">
+      <button class="sec" id="mic">Dicter</button>
+      <label class="sec" id="attl" style="display:inline-block;margin:0;font-size:16px;color:var(--ink)">Joindre une image<input type="file" id="att" accept="image/*" hidden></label>
+      <button class="sec" id="chatb">Chat suivi : non</button>
+    </div>
+    <p class="m" id="attn" hidden></p>
     <button class="go" id="go">Générer</button>
   </div>
   <div id="result"></div>
@@ -158,16 +169,17 @@ async function tryIds(ids,fn){
 }
 
 /* ---------- moteurs ---------- */
-const ptext=(ids,l)=>({l,n:'Via Puter.',puter:1,run:async p=>{await ensurePuter();
-  const r=await wait(90000,tryIds(ids,id=>id?puter.ai.chat(p,{model:id}):puter.ai.chat(p)));
+let ATT=null,ATTM='',VIS=false;
+const ptext=(ids,l)=>({l,n:'Via Puter.',puter:1,vis:1,run:async p=>{await ensurePuter();
+  const r=await wait(90000,tryIds(ids,id=>VIS?(id?puter.ai.chat(p,ATT,{model:id}):puter.ai.chat(p,ATT)):(id?puter.ai.chat(p,{model:id}):puter.ai.chat(p))));
   let t=typeof r==='string'?r:(r&&r.message&&r.message.content)||'';
   if(Array.isArray(t))t=t.map(x=>x.text||'').join('');
   if(!t)throw new Error('réponse vide');return {text:t}}});
 const polltext={l:'Pollinations texte',n:'Sans compte, qualité moyenne.',run:async p=>{
   const r=await wait(60000,fetch('https://text.pollinations.ai/'+encodeURIComponent(p)));
   if(!r.ok)throw new Error('indisponible '+r.status);const t=await r.text();if(!t.trim())throw new Error('réponse vide');return {text:t}}};
-const gem=(id,l)=>({l,n:'Clé Gemini requise (onglet Infos).',key:1,run:async p=>{
-  const r=await wait(60000,fetch('https://generativelanguage.googleapis.com/v1beta/models/'+id+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':gkey()},body:JSON.stringify({contents:[{parts:[{text:p}]}]})}));
+const gem=(id,l)=>({l,n:'Clé Gemini requise (onglet Infos).',key:1,vis:1,run:async p=>{
+  const r=await wait(60000,fetch('https://generativelanguage.googleapis.com/v1beta/models/'+id+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':gkey()},body:JSON.stringify({contents:[{parts:[{text:p},...(VIS?[{inline_data:{mime_type:ATTM,data:ATT.split(',')[1]}}]:[])]}]})}));
   const d=await r.json();if(!r.ok)throw new Error(d.error&&d.error.message||'erreur '+r.status);
   return {text:d.candidates[0].content.parts.map(x=>x.text||'').join('')}}});
 
@@ -244,10 +256,14 @@ const GQ='https://api.groq.com/openai/v1/chat/completions',KT=[
  ['Groq (quota quotidien)',oai('groq',GQ,'openai/gpt-oss-120b','Groq · GPT-OSS 120B','Raisonnement, très rapide. Clé Groq requise.')],
  ['OpenRouter (modèles gratuits)',oai('openrouter','https://openrouter.ai/api/v1/chat/completions','openrouter/free','OpenRouter · Gratuit auto','Choisit un modèle gratuit. Environ 50 requêtes/jour.')],
  ['Hugging Face (crédits gratuits)',oai('hf','https://router.huggingface.co/v1/chat/completions','openai/gpt-oss-120b','Hugging Face · GPT-OSS 120B','Crédits gratuits mensuels limités.')]];
-C.text.list.push(...KT);
+const pollt=(model,l)=>({l,n:'Sans compte, qualité variable.',run:async p=>{
+  const r=await wait(60000,fetch('https://text.pollinations.ai/'+encodeURIComponent(p)+'?model='+model));
+  if(!r.ok)throw new Error('indisponible '+r.status);const t=await r.text();if(!t.trim())throw new Error('réponse vide');return {text:t}}});
+const PT=[pollt('openai','Pollinations · OpenAI'),pollt('mistral','Pollinations · Mistral')];
+C.text.list.push(...PT.map(m=>[Q,m]),...KT);
 C.img.list.push(['Hugging Face (crédits gratuits)',hfimg],['Sans compte (file d\'attente)',horde]);
 const AUTO={
- text:()=>[C.text.list[0][1],polltext,...C.text.list.map(e=>e[1]).filter(m=>m.key&&hk(m))],
+ text:()=>[C.text.list[0][1],polltext,...PT,...C.text.list.map(e=>e[1]).filter(m=>m.key&&hk(m))],
  img:()=>[C.img.list[0][1],C.img.list[7][1],C.img.list[8][1],C.img.list[6][1],...(hk(hfimg)?[hfimg]:[]),horde],
  vid:()=>[wan,pdef,vidu,kling,...(gkey()?[veo]:[])]
 };
@@ -339,6 +355,8 @@ function showItem(it,box,bare){
   c.appendChild(renderItem(it));
   const a=mk('div','acts');a.appendChild(btn('Télécharger',()=>dl(it),'pri'));
   if(it.type==='text')a.appendChild(btn('Copier',b=>{try{navigator.clipboard.writeText(it.text);b.textContent='Copié'}catch(e){b.textContent='Copie impossible'}}));
+  if(it.type==='text'&&window.speechSynthesis)a.appendChild(btn('Lire',b=>{const ss=speechSynthesis;if(ss.speaking){ss.cancel();b.textContent='Lire';return}
+    const u=new SpeechSynthesisUtterance(it.text.slice(0,4000));u.lang='fr-FR';u.onend=()=>{b.textContent='Lire'};b.textContent='Stop';ss.speak(u)}));
   c.appendChild(a);c.appendChild(mk('p','m','Généré avec '+it.model));
   box.appendChild(c);c.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
@@ -350,24 +368,46 @@ VIEWS.forEach(v=>$('nb-'+v).onclick=()=>go(v));
 let ctype='text';
 const PH={text:'Écris ce que tu veux générer…',img:'Décris l\'image (l\'anglais donne de meilleurs résultats)…',vid:'Décris la vidéo (l\'anglais donne de meilleurs résultats). Compte 1 à 5 minutes.'};
 function setType(t){ctype=t;document.querySelectorAll('#seg button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
-  ['text','img','vid'].forEach(x=>{$('m-'+x).hidden=x!==t;$('n-'+x).hidden=x!==t});$('prompt').placeholder=PH[t]}
+  ['text','img','vid'].forEach(x=>{$('m-'+x).hidden=x!==t;$('n-'+x).hidden=x!==t});$('prompt').placeholder=PH[t];['attl','chatb'].forEach(i=>$(i).hidden=t!=='text')}
 document.querySelectorAll('#seg button').forEach(b=>b.onclick=()=>setType(b.dataset.t));
 setType('text');
+
+/* ---------- voix, image jointe, chat suivi ---------- */
+let chatOn=false,hist=[];
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+$('mic').onclick=()=>{if(!SR){$('mic').textContent='Dictée non supportée ici';return}
+  const r=new SR();r.lang='fr-FR';r.interimResults=false;$('mic').textContent='J\'écoute…';
+  r.onresult=e=>{const q=$('prompt');q.value+=(q.value?' ':'')+e.results[0][0].transcript};
+  r.onend=r.onerror=()=>{$('mic').textContent='Dicter'};r.start()};
+$('att').onchange=e=>{const f=e.target.files[0];if(!f)return;const fr=new FileReader();
+  fr.onload=()=>{ATT=fr.result;ATTM=f.type;$('attn').hidden=false;$('attn').textContent='Image jointe : '+f.name+' (touche ici pour retirer)'};fr.readAsDataURL(f)};
+$('attn').onclick=()=>{ATT=null;$('att').value='';$('attn').hidden=true};
+$('chatb').onclick=()=>{chatOn=!chatOn;hist=[];$('chatb').textContent='Chat suivi : '+(chatOn?'oui':'non')};
+const cool={};
+async function runR(m,q){try{return await m.run(q)}catch(e){const h=human(e);
+  if(/quota/.test(h))cool[m.l]=Date.now()+9e5;
+  if(/connexion/.test(h)){await new Promise(s=>setTimeout(s,1500));return await m.run(q)}
+  throw e}}
 
 /* ---------- génération ---------- */
 async function generate(){
   const t=ctype,p=$('prompt').value.trim();if(!p)return;
+  VIS=t==='text'&&!!ATT;
+  const q=t==='text'&&chatOn&&hist.length?'Conversation précédente :\n'+hist.slice(-8).join('\n')+'\n\nRéponds au dernier message.\nUtilisateur : '+p:p;
   const b=$('go');b.disabled=true;$('result').innerHTML='';
-  const sel=cur(t),chain=sel.auto?AUTO[t]():[sel],fails=[];
+  const sel=cur(t),fails=[];let chain=sel.auto?AUTO[t]():[sel];
+  if(VIS){chain=chain.filter(m=>m.vis);if(!chain.length)fails.push('Aucun modèle compatible image : choisis un modèle Puter ou Gemini')}
   Prog.start('Cap sur l\'horizon…',{text:7000,img:14000,vid:80000}[t]);
   for(let i=0;i<chain.length;i++){
     const m=chain[i];
+    if(chain.length>1&&(cool[m.l]||0)>Date.now()){fails.push(m.l+' : en pause (quota atteint)');continue}
     if(m.key&&!hk(m)){fails.push(m.l+' : ajoute ta clé dans Réglages');continue}
     if(m.puter&&puterBlocked){fails.push(m.l+' : connexion Puter annulée');continue}
     Prog.label((chain.length>1?'Essai '+(i+1)+'/'+chain.length+' · ':'')+m.l);
     try{
-      const r=await m.run(p);Prog.label('Enregistrement…');
+      const r=await runR(m,q);Prog.label('Enregistrement…');
       const it=await save(TYPE[t],p,m.l,r);
+      if(t==='text'&&chatOn){hist.push('Utilisateur : '+p,'Assistant : '+String(r.text).slice(0,1500));$('prompt').value=''}
       Prog.done();showItem(it,$('result'));b.disabled=false;return;
     }catch(e){fails.push(m.l+' : '+human(e))}
   }
@@ -426,12 +466,13 @@ $('plogin').onclick=async()=>{try{puterBlocked=false;await puter.auth.signIn();$
 
 /* ---------- mode agent ---------- */
 async function attempt(t,p,say){
+  VIS=false;
   let last='';
   for(const m of AUTO[t]()){
     if(m.key&&!hk(m))continue;
     if(m.puter&&puterBlocked)continue;
     if(say)say(m.l);
-    try{return {r:await m.run(p),label:m.l}}catch(e){last=human(e)}
+    try{return {r:await runR(m,p),label:m.l}}catch(e){last=human(e)}
   }
   throw new Error(last||'aucun service disponible');
 }
