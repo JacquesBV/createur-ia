@@ -111,6 +111,10 @@ ol{margin:6px 0 0 18px;padding:0}
     <input id="key" type="password" placeholder="Colle ta clé ici" autocomplete="off">
     <button class="go" id="save">Enregistrer la clé</button>
   </div>
+  <div class="card" id="keys">
+    <h3>Autres clés gratuites</h3>
+    <p class="m" style="margin-bottom:8px">Toutes sont gratuites (quotas quotidiens ou mensuels). Elles restent dans ce navigateur. Un modèle n'apparaît dans « Auto » que si sa clé est renseignée.</p>
+  </div>
   <div class="card">
     <h3>À savoir</h3>
     <p class="m">Le pourcentage de la barre est une estimation : les services ne donnent pas leur avancement réel. L'historique est gardé sur cet appareil : vider les données du navigateur l'efface.</p>
@@ -188,6 +192,25 @@ const veo={l:'Veo 3 Fast (payant)',n:'Clé Gemini avec facturation requise.',key
   if(!v.ok)throw new Error('téléchargement impossible');
   const el=document.createElement('video');el.controls=true;el.setAttribute('playsinline','');el.src=URL.createObjectURL(await v.blob());return {el,src:el.src}}};
 
+const KEYS={groq:['Groq','console.groq.com/keys'],openrouter:['OpenRouter','openrouter.ai/keys'],mistral:['Mistral','console.mistral.ai/api-keys'],cerebras:['Cerebras','cloud.cerebras.ai'],hf:['Hugging Face','huggingface.co/settings/tokens (droit Inference Providers)']};
+const hk=m=>m.key===1?gkey():store('k-'+m.key);
+const oai=(kid,url,model,l,n)=>({l,n,key:kid,run:async p=>{
+  const r=await wait(60000,fetch(url,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+store('k-'+kid)},body:JSON.stringify({model,messages:[{role:'user',content:p}]})}));
+  const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error((d.error&&d.error.message)||'erreur '+r.status);
+  const t=d.choices&&d.choices[0].message.content;if(!t)throw new Error('réponse vide');return {text:t}}});
+const loadImg=u=>new Promise((ok,ko)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>ko(new Error('image invalide'));i.src=u});
+const hfimg={l:'FLUX.1 Schnell (Hugging Face)',n:'Clé Hugging Face requise, crédits gratuits mensuels.',key:'hf',run:async p=>{
+  const r=await wait(90000,fetch('https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+store('k-hf')},body:JSON.stringify({inputs:p})}));
+  if(!r.ok)throw new Error('erreur '+r.status);const u=URL.createObjectURL(await r.blob());return {el:await loadImg(u),src:u}}};
+const horde={l:'AI Horde (Stable Diffusion)',n:'Sans compte, file d\'attente communautaire : 1 à 3 min.',run:async p=>{
+  const B='https://aihorde.net/api/v2/',H={'Content-Type':'application/json',apikey:'0000000000'};
+  const r=await fetch(B+'generate/async',{method:'POST',headers:H,body:JSON.stringify({prompt:p,params:{width:512,height:512,steps:25,n:1},nsfw:false,censor_nsfw:true,r2:true})});
+  const d=await r.json();if(!r.ok||!d.id)throw new Error(d.message||'erreur '+r.status);
+  for(let i=0;;i++){if(i>=70)throw new Error('timeout');await new Promise(s=>setTimeout(s,3000));
+    const c=await (await fetch(B+'generate/check/'+d.id)).json();if(c.faulted)throw new Error('échec');if(c.done)break}
+  const s=await (await fetch(B+'generate/status/'+d.id)).json(),g=s.generations&&s.generations[0];
+  if(!g)throw new Error('aucune image');return {el:await loadImg(g.img),src:g.img}}};
+
 /* ---------- catalogue ---------- */
 const P='Puter (compte gratuit)',Q='Sans compte (Pollinations)',K='Avec clé Gemini';
 const wan=pvid(['wan-ai/wan2.2-t2v-a14b'],'Wan 2.2','Clips de 5 s, coût réduit.');
@@ -216,9 +239,18 @@ const C={
   ['Qualité cinéma',kling],['Qualité cinéma',vidu],
   [K,veo]]}
 };
+const GQ='https://api.groq.com/openai/v1/chat/completions',KT=[
+ ['Groq (quota quotidien)',oai('groq',GQ,'llama-3.3-70b-versatile','Groq · Llama 3.3 70B','Très rapide. Clé Groq requise.')],
+ ['Groq (quota quotidien)',oai('groq',GQ,'openai/gpt-oss-120b','Groq · GPT-OSS 120B','Raisonnement, très rapide. Clé Groq requise.')],
+ ['OpenRouter (modèles gratuits)',oai('openrouter','https://openrouter.ai/api/v1/chat/completions','openrouter/free','OpenRouter · Gratuit auto','Choisit un modèle gratuit. Environ 50 requêtes/jour.')],
+ ['Mistral (gratuit)',oai('mistral','https://api.mistral.ai/v1/chat/completions','mistral-small-latest','Mistral Small','Bon en français. Clé Mistral requise.')],
+ ['Cerebras (gratuit)',oai('cerebras','https://api.cerebras.ai/v1/chat/completions','gpt-oss-120b','Cerebras · GPT-OSS 120B','Ultra rapide. Clé Cerebras requise.')],
+ ['Hugging Face (crédits gratuits)',oai('hf','https://router.huggingface.co/v1/chat/completions','openai/gpt-oss-120b','Hugging Face · GPT-OSS 120B','Crédits gratuits mensuels limités.')]];
+C.text.list.push(...KT);
+C.img.list.push(['Hugging Face (crédits gratuits)',hfimg],['Sans compte (file d\'attente)',horde]);
 const AUTO={
- text:()=>[C.text.list[0][1],polltext,...(gkey()?[C.text.list[2][1]]:[])],
- img:()=>[C.img.list[0][1],C.img.list[7][1],C.img.list[8][1],C.img.list[6][1]],
+ text:()=>[C.text.list[0][1],polltext,...C.text.list.map(e=>e[1]).filter(m=>m.key&&hk(m))],
+ img:()=>[C.img.list[0][1],C.img.list[7][1],C.img.list[8][1],C.img.list[6][1],...(hk(hfimg)?[hfimg]:[]),horde],
  vid:()=>[wan,pdef,vidu,kling,...(gkey()?[veo]:[])]
 };
 const AUTO_ENTRY={l:'Auto (essaie tout seul)',n:'Teste plusieurs services à la suite et n\'affiche une erreur que si tous échouent.',auto:1};
@@ -246,9 +278,8 @@ if(hasPuter()&&puter.ai.listModels){
     const star=ents.filter(x=>fav.test(x.id)).slice(0,14).map(x=>['Puter : recommandés',ptext([x.id],x.name||x.id)]);
     const used=new Set(star.map(e=>e[1].l));
     const rest=ents.filter(x=>!used.has(x.name||x.id)).slice(0,300).map(x=>['Puter : '+(x.provider||'divers'),ptext([x.id],x.name||x.id)]);
-    C.text.list=[C.text.list[0],...star,...rest,C.text.list[1],C.text.list[2],C.text.list[3]];
+    C.text.list=[C.text.list[0],...star,...rest,...C.text.list.slice(1)];
     C.text.entries=[['Recommandé',AUTO_ENTRY]].concat(C.text.list);
-    AUTO.text=()=>[C.text.list[0][1],polltext,...(gkey()?[C.text.list[C.text.list.length-2][1]]:[])];
     build('text');
   }).catch(()=>{});
 }
@@ -333,7 +364,7 @@ async function generate(){
   Prog.start('Cap sur l\'horizon…',{text:7000,img:14000,vid:80000}[t]);
   for(let i=0;i<chain.length;i++){
     const m=chain[i];
-    if(m.key&&!gkey()){fails.push(m.l+' : ajoute ta clé Gemini dans Réglages');continue}
+    if(m.key&&!hk(m)){fails.push(m.l+' : ajoute ta clé dans Réglages');continue}
     if(m.puter&&puterBlocked){fails.push(m.l+' : connexion Puter annulée');continue}
     Prog.label((chain.length>1?'Essai '+(i+1)+'/'+chain.length+' · ':'')+m.l);
     try{
@@ -392,13 +423,14 @@ async function renderFiles(){
 /* ---------- réglages ---------- */
 $('key').value=gkey();
 $('save').onclick=()=>{store('gkey',$('key').value.trim());$('save').textContent='Clé enregistrée'};
+Object.entries(KEYS).forEach(([id,[n,u]])=>{const w=mk('div'),i=mk('input');w.appendChild(mk('label','',n+' : '+u));i.type='password';i.autocomplete='off';i.placeholder='Clé '+n;i.value=store('k-'+id);i.onchange=()=>store('k-'+id,i.value.trim());w.appendChild(i);$('keys').appendChild(w)});
 $('plogin').onclick=async()=>{try{puterBlocked=false;await puter.auth.signIn();$('plogin').textContent='Connecté à Puter'}catch(e){$('plogin').textContent='Échec : autorise les pop-ups et réessaie'}};
 
 /* ---------- mode agent ---------- */
 async function attempt(t,p,say){
   let last='';
   for(const m of AUTO[t]()){
-    if(m.key&&!gkey())continue;
+    if(m.key&&!hk(m))continue;
     if(m.puter&&puterBlocked)continue;
     if(say)say(m.l);
     try{return {r:await m.run(p),label:m.l}}catch(e){last=human(e)}
