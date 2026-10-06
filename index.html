@@ -192,7 +192,7 @@ const veo={l:'Veo 3 Fast (payant)',n:'Clé Gemini avec facturation requise.',key
   if(!v.ok)throw new Error('téléchargement impossible');
   const el=document.createElement('video');el.controls=true;el.setAttribute('playsinline','');el.src=URL.createObjectURL(await v.blob());return {el,src:el.src}}};
 
-const KEYS={groq:['Groq','console.groq.com/keys'],openrouter:['OpenRouter','openrouter.ai/keys'],mistral:['Mistral','console.mistral.ai/api-keys'],cerebras:['Cerebras','cloud.cerebras.ai'],hf:['Hugging Face','huggingface.co/settings/tokens (droit Inference Providers)']};
+const KEYS={groq:['Groq','console.groq.com/keys'],openrouter:['OpenRouter','openrouter.ai/keys'],hf:['Hugging Face','huggingface.co/settings/tokens (droit Inference Providers)']};
 const hk=m=>m.key===1?gkey():store('k-'+m.key);
 const oai=(kid,url,model,l,n)=>({l,n,key:kid,run:async p=>{
   const r=await wait(60000,fetch(url,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+store('k-'+kid)},body:JSON.stringify({model,messages:[{role:'user',content:p}]})}));
@@ -243,8 +243,6 @@ const GQ='https://api.groq.com/openai/v1/chat/completions',KT=[
  ['Groq (quota quotidien)',oai('groq',GQ,'llama-3.3-70b-versatile','Groq · Llama 3.3 70B','Très rapide. Clé Groq requise.')],
  ['Groq (quota quotidien)',oai('groq',GQ,'openai/gpt-oss-120b','Groq · GPT-OSS 120B','Raisonnement, très rapide. Clé Groq requise.')],
  ['OpenRouter (modèles gratuits)',oai('openrouter','https://openrouter.ai/api/v1/chat/completions','openrouter/free','OpenRouter · Gratuit auto','Choisit un modèle gratuit. Environ 50 requêtes/jour.')],
- ['Mistral (gratuit)',oai('mistral','https://api.mistral.ai/v1/chat/completions','mistral-small-latest','Mistral Small','Bon en français. Clé Mistral requise.')],
- ['Cerebras (gratuit)',oai('cerebras','https://api.cerebras.ai/v1/chat/completions','gpt-oss-120b','Cerebras · GPT-OSS 120B','Ultra rapide. Clé Cerebras requise.')],
  ['Hugging Face (crédits gratuits)',oai('hf','https://router.huggingface.co/v1/chat/completions','openai/gpt-oss-120b','Hugging Face · GPT-OSS 120B','Crédits gratuits mensuels limités.')]];
 C.text.list.push(...KT);
 C.img.list.push(['Hugging Face (crédits gratuits)',hfimg],['Sans compte (file d\'attente)',horde]);
