@@ -6,8 +6,8 @@
 <title>Créateur IA</title>
 <script src="https://js.puter.com/v2/"></script>
 <style>
-:root{--bg:#eef1f6;--card:#fff;--ink:#14213d;--mut:#5b6784;--acc:#2f6bff;--line:#d5dbe8}
-@media (prefers-color-scheme:dark){:root{--bg:#0f1626;--card:#18223a;--ink:#eef1f6;--mut:#9aa6c4;--line:#2a3657}}
+:root{--bg:#eef1f6;--card:#fff;--ink:#14213d;--mut:#5b6784;--acc:#2f6bff;--line:#d5dbe8;--warn:#b25e00}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1626;--card:#18223a;--ink:#eef1f6;--mut:#9aa6c4;--line:#2a3657;--warn:#f0a44b}}
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif;padding:env(safe-area-inset-top) 14px env(safe-area-inset-bottom)}
@@ -18,13 +18,15 @@ nav button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
 label{display:block;font-size:14px;color:var(--mut);margin-bottom:4px}
 select,textarea,input{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;margin-bottom:6px}
-textarea{min-height:110px;resize:vertical;margin-top:6px;margin-bottom:10px}
-.go{width:100%;padding:14px;border:0;border-radius:10px;background:var(--acc);color:#fff;font:600 16px system-ui}
+textarea{min-height:100px;resize:vertical;margin-top:6px;margin-bottom:10px}
+.go,.sec{width:100%;padding:14px;border:0;border-radius:10px;background:var(--acc);color:#fff;font:600 16px system-ui}
+.sec{background:transparent;color:var(--acc);border:1px solid var(--acc);padding:10px;margin-top:8px;font-weight:500;font-size:15px}
 .go:disabled{opacity:.5}
 #out{white-space:pre-wrap;word-break:break-word}
 img,video{max-width:100%;border-radius:10px;display:block}
 .m{color:var(--mut);font-size:14px;margin:0}
-.err{color:#d6304a}
+.warn{color:var(--warn)}
+.row{display:flex;gap:8px}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -38,195 +40,213 @@ img,video{max-width:100%;border-radius:10px;display:block}
 </nav>
 
 <section id="p-text" class="card">
-  <label for="m-text">Modèle (classés par compétence)</label><select id="m-text"></select><p class="m" id="n-text"></p>
+  <label for="m-text">Modèle</label><select id="m-text"></select><p class="m" id="n-text"></p>
   <textarea id="i-text" placeholder="Écris ce que tu veux générer…"></textarea>
   <button class="go" id="g-text">Générer le texte</button>
 </section>
-
 <section id="p-img" class="card" hidden>
-  <label for="m-img">Modèle (classés par compétence)</label><select id="m-img"></select><p class="m" id="n-img"></p>
-  <textarea id="i-img" placeholder="Décris l'image (en anglais = meilleurs résultats)…"></textarea>
+  <label for="m-img">Modèle</label><select id="m-img"></select><p class="m" id="n-img"></p>
+  <textarea id="i-img" placeholder="Décris l'image (l'anglais donne de meilleurs résultats)…"></textarea>
   <button class="go" id="g-img">Générer l'image</button>
 </section>
-
 <section id="p-vid" class="card" hidden>
-  <label for="m-vid">Modèle (classés par compétence)</label><select id="m-vid"></select><p class="m" id="n-vid"></p>
-  <textarea id="i-vid" placeholder="Décris la vidéo (en anglais = meilleurs résultats)…"></textarea>
+  <label for="m-vid">Modèle</label><select id="m-vid"></select><p class="m" id="n-vid"></p>
+  <textarea id="i-vid" placeholder="Décris la vidéo (l'anglais donne de meilleurs résultats)…"></textarea>
   <button class="go" id="g-vid">Générer la vidéo</button>
-  <p class="m">Une vidéo prend de 1 à 5 minutes.</p>
+  <p class="m" style="margin-top:8px">Une vidéo prend de 1 à 5 minutes.</p>
 </section>
-
 <section id="p-set" class="card" hidden>
-  <p class="m"><b>Puter</b> : sans clé API. Au premier usage, une fenêtre te propose de te connecter à un compte Puter gratuit. C'est ton compte qui paie l'usage, avec un crédit gratuit limité, surtout pour la vidéo.</p>
-  <p class="m" style="margin-top:8px"><b>Pollinations</b> : sans compte, mais lent aux heures de pointe.</p>
-  <p class="m" style="margin-top:8px"><b>Gemini</b> : seulement si tu colles une clé Google AI Studio ci-dessous.</p>
-  <input id="key" type="password" placeholder="Clé Gemini (facultatif)" autocomplete="off" style="margin-top:10px">
+  <p class="m"><b>Mode Auto</b> (recommandé) : l'app essaie plusieurs services l'un après l'autre et n'affiche une erreur que si tous échouent.</p>
+  <p class="m" style="margin-top:8px"><b>Puter</b> : compte gratuit, crédit limité. Connecte-toi une fois ici :</p>
+  <button class="sec" id="puter-login">Se connecter à Puter</button>
+  <p class="m" style="margin-top:12px"><b>Pollinations</b> : sans compte, mais images limitées à une toutes les 15 s environ.</p>
+  <p class="m" style="margin-top:12px"><b>Gemini</b> (facultatif) : clé gratuite sur aistudio.google.com.</p>
+  <input id="key" type="password" placeholder="Clé Gemini (facultatif)" autocomplete="off" style="margin-top:6px">
   <button class="go" id="save">Enregistrer la clé</button>
 </section>
-
 <section id="res" class="card" hidden><div id="out"></div></section>
 
 <script>
 const $=id=>document.getElementById(id);
-const G1='Sans clé (compte Puter)',G2='Sans clé ni compte (Pollinations)',G3='Avec clé Gemini';
-const MODELS={
-  text:[
-    {g:'Polyvalent, conversation',p:'chat',ids:['openai/gpt-5-chat-latest','gpt-5-chat-latest','openai/gpt-5-mini','gpt-5-mini'],l:'GPT-5 Chat',n:'Très bon généraliste : rédaction, explications, idées.'},
-    {g:'Polyvalent, conversation',p:'chat',ids:['deepseek/deepseek-chat','deepseek-chat'],l:'DeepSeek Chat',n:'Bon en raisonnement, maths et rédaction.'},
-    {g:'Multilingue et code',p:'chat',ids:['qwen/qwen3.6-plus','qwen/qwen3-235b-a22b'],l:'Qwen 3.6 Plus',n:'Fort en langues et en programmation.'},
-    {g:'Agents et long texte',p:'chat',ids:['moonshotai/kimi-k2','moonshotai/kimi-k2:free'],l:'Kimi K2',n:'Bon pour les tâches en plusieurs étapes et les longs textes.'},
-    {g:'Rapide et léger',p:'chat',ids:['rekaai/reka-flash-3'],l:'Reka Flash 3',n:'Réponses rapides pour les questions simples.'},
-    {g:G2,p:'poll',id:'',l:'Pollinations texte',n:'Sans compte, qualité moyenne, peut être indisponible.'},
-    {g:G3,p:'gem',id:'gemini-2.5-flash',l:'Gemini 2.5 Flash',n:'Généraliste rapide, quotas gratuits.'},
-    {g:G3,p:'gem',id:'gemini-2.5-flash-lite',l:'Gemini 2.5 Flash-Lite',n:'Plus léger, quotas plus larges.'}],
-  img:[
-    {g:'Recommandé',p:'img',ids:[null],l:'Défaut Puter (le plus fiable)',n:'Le modèle choisi par Puter, sans nom à deviner.'},
-    {g:'Réalisme et texte lisible',p:'img',ids:['gpt-image-1.5'],o:{quality:'low'},l:'GPT Image 1.5',n:'Le plus fidèle au prompt, écrit bien du texte dans l\'image.'},
-    {g:'Réalisme et texte lisible',p:'img',ids:['gpt-image-1-mini'],o:{quality:'low'},l:'GPT Image 1 Mini',n:'Version économique de GPT Image.'},
-    {g:'Réalisme et texte lisible',p:'img',ids:['dall-e-3','openai/dall-e-3'],l:'DALL·E 3',n:'Images soignées, bonne compréhension des scènes.'},
-    {g:'Créatif et retouche',p:'img',ids:['gemini-3-pro-image','gemini-3-pro-image-preview','gemini-3.1-flash-image-preview','gemini-2.5-flash-image-preview'],l:'Gemini Image (Nano Banana)',n:'Créatif, cohérent sur plusieurs images.'},
-    {g:'Artistique',p:'img',ids:['stabilityai/stable-diffusion-3-medium'],l:'Stable Diffusion 3',n:'Style illustration et art numérique.'},
-    {g:'Rapide',p:'img',ids:['black-forest-labs/FLUX.1-schnell','black-forest-labs/flux-schnell'],l:'Flux Schnell',n:'Très rapide, bon rapport qualité/vitesse.'},
-    {g:'Rapide',p:'img',ids:['rundiffusion/juggernaut-lightning-flux'],l:'Juggernaut Lightning Flux',n:'Rapide, rendu photo détaillé.'},
-    {g:G2,p:'poll',id:'flux',l:'Pollinations Flux',n:'Sans compte, une image toutes les 15 s environ.'},
-    {g:G2,p:'poll',id:'turbo',l:'Pollinations Turbo',n:'Sans compte, plus rapide, qualité moindre.'}],
-  vid:[
-    {g:'Qualité cinéma',p:'vid',ids:['kwaivgI/kling-2.1-master'],l:'Kling 2.1 Master',n:'Réalisme et mouvements fluides, jusqu\'à 1080p. Coûte plus de crédits.'},
-    {g:'Qualité cinéma',p:'vid',ids:['vidu/vidu-q1'],l:'Vidu Q1',n:'Bonne qualité, bonne tenue du sujet.'},
-    {g:'Économique',p:'vid',ids:['wan-ai/wan2.2-t2v-a14b'],l:'Wan 2.2',n:'Clips de 5 s en 480p ou 720p, coût réduit.'},
-    {g:G3,p:'veo',id:'veo-3.0-fast-generate-001',l:'Veo 3 Fast (payant)',n:'Demande une clé Gemini avec facturation.'}]
-};
-const tabs=['text','img','vid','set'];
-function store(k,v){try{if(v===undefined)return localStorage.getItem(k)||'';localStorage.setItem(k,v)}catch(e){return ''}}
-function show(n){tabs.forEach(t=>{$('p-'+t).hidden=t!==n;$('t-'+t).classList.toggle('on',t===n)});$('res').hidden=true}
-tabs.forEach(t=>$('t-'+t).onclick=()=>show(t));
+const store=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k)||'';localStorage.setItem(k,v)}catch(e){return ''}};
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const wait=(ms,p)=>Promise.race([p,new Promise((_,ko)=>setTimeout(()=>ko(new Error('timeout')),ms))]);
+const hasPuter=()=>typeof puter!=='undefined'&&puter.ai;
+const gkey=()=>store('gkey');
 
-function buildSelect(t){
-  const s=$('m-'+t),groups={};
-  s.innerHTML='';
-  MODELS[t].forEach((m,i)=>{
-    if(!groups[m.g]){groups[m.g]=document.createElement('optgroup');groups[m.g].label=m.g;s.appendChild(groups[m.g])}
-    groups[m.g].appendChild(new Option(m.l,i));
-  });
-  const note=()=>{$('n-'+t).textContent=pick(t).n};
-  const k=MODELS[t].findIndex(m=>m.l===store('sel3-'+t));
-  s.value=k>=0?k:0;
-  s.onchange=()=>{store('sel3-'+t,pick(t).l);note()};
-  note();
+function human(e){
+  const m=String(e&&(e.message||(e.error&&e.error.message)||e.msg)||(typeof e==='string'?e:JSON.stringify(e))||'');
+  if(/cancel|auth/i.test(m))return 'connexion Puter annulée';
+  if(/not found|unknown model|invalid model|no such model/i.test(m))return 'modèle indisponible';
+  if(/credit|quota|limit|insufficient|429|usage|balance/i.test(m))return 'quota ou crédits épuisés';
+  if(/timeout/i.test(m))return 'réponse trop lente';
+  if(/failed to fetch|network|load/i.test(m))return 'problème de connexion';
+  if(/refus|policy|safety|moderat|content/i.test(m))return 'demande refusée par le modèle';
+  return m.slice(0,100)||'erreur inconnue';
 }
-['text','img','vid'].forEach(buildSelect);
+let puterBlocked=false;
+async function ensurePuter(){
+  if(!hasPuter())throw new Error('Puter ne se charge pas');
+  if(puterBlocked)throw new Error('cancel');
+  try{if(puter.auth&&!puter.auth.isSignedIn())await puter.auth.signIn()}catch(e){puterBlocked=true;throw new Error('cancel')}
+}
+async function tryIds(ids,fn){
+  let last;
+  for(const id of ids){
+    try{return await fn(id)}catch(e){last=e;if(!/not found|unknown model|invalid model|no such model/i.test(String(e&&(e.message||(e.error&&e.error.message))||'')))throw e}
+  }
+  throw last;
+}
 
-if(typeof puter!=='undefined'&&puter.ai&&puter.ai.listModels){
+/* ---------- moteurs ---------- */
+const ptext=(ids,l)=>({l,n:'Via Puter.',puter:1,run:async p=>{await ensurePuter();
+  const r=await wait(90000,tryIds(ids,id=>id?puter.ai.chat(p,{model:id}):puter.ai.chat(p)));
+  let t=typeof r==='string'?r:(r&&r.message&&r.message.content)||'';
+  if(Array.isArray(t))t=t.map(x=>x.text||'').join('');
+  if(!t)throw new Error('réponse vide');return {text:t}}});
+const polltext={l:'Pollinations texte',n:'Sans compte, qualité moyenne.',run:async p=>{
+  const r=await wait(60000,fetch('https://text.pollinations.ai/'+encodeURIComponent(p)));
+  if(!r.ok)throw new Error('indisponible '+r.status);const t=await r.text();if(!t.trim())throw new Error('réponse vide');return {text:t}}};
+const gem=(id,l)=>({l,n:'Clé Gemini requise (onglet Infos).',key:1,run:async p=>{
+  const r=await wait(60000,fetch('https://generativelanguage.googleapis.com/v1beta/models/'+id+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':gkey()},body:JSON.stringify({contents:[{parts:[{text:p}]}]})}));
+  const d=await r.json();if(!r.ok)throw new Error(d.error&&d.error.message||'erreur '+r.status);
+  return {text:d.candidates[0].content.parts.map(x=>x.text||'').join('')}}});
+
+const pimg=(ids,l,n,o)=>({l,n,puter:1,run:async p=>{await ensurePuter();
+  const im=await wait(120000,tryIds(ids,id=>puter.ai.txt2img(p,Object.assign(id?{model:id}:{},o||{}))));
+  return {el:im,src:im.src}}});
+const pollimg=(model,l,n)=>({l,n,run:async p=>{
+  const u='https://image.pollinations.ai/prompt/'+encodeURIComponent(p)+'?width=1024&height=1024&nologo=true&model='+model+'&seed='+Math.floor(Math.random()*1e6);
+  const im=await wait(70000,new Promise((ok,ko)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>ko(new Error('Pollinations occupé'));i.src=u}));
+  return {el:im,src:u}}});
+
+const pvid=(ids,l,n)=>({l,n,puter:1,run:async p=>{await ensurePuter();
+  const v=await wait(420000,tryIds(ids,id=>id?puter.ai.txt2vid(p,{model:id}):puter.ai.txt2vid(p)));
+  v.controls=true;v.setAttribute('playsinline','');return {el:v,src:v.src}}});
+const veo={l:'Veo 3 Fast (payant)',n:'Clé Gemini avec facturation requise.',key:1,run:async p=>{
+  const H={'Content-Type':'application/json','x-goog-api-key':gkey()},B='https://generativelanguage.googleapis.com/v1beta/';
+  let r=await fetch(B+'models/veo-3.0-fast-generate-001:predictLongRunning',{method:'POST',headers:H,body:JSON.stringify({instances:[{prompt:p}]})});
+  let d=await r.json();if(!r.ok)throw new Error(d.error&&d.error.message||'erreur '+r.status);
+  for(let i=0;i<60&&!d.done;i++){await new Promise(s=>setTimeout(s,8000));r=await fetch(B+d.name,{headers:H});d=await r.json()}
+  if(!d.done)throw new Error('timeout');if(d.error)throw new Error(d.error.message);
+  const v=await fetch(d.response.generateVideoResponse.generatedSamples[0].video.uri,{headers:{'x-goog-api-key':gkey()}});
+  if(!v.ok)throw new Error('téléchargement impossible');
+  const el=document.createElement('video');el.controls=true;el.setAttribute('playsinline','');el.src=URL.createObjectURL(await v.blob());return {el,src:el.src}}};
+
+/* ---------- catalogue ---------- */
+const P='Puter (compte gratuit)',Q='Sans compte (Pollinations)',K='Avec clé Gemini';
+const wan=pvid(['wan-ai/wan2.2-t2v-a14b'],'Wan 2.2','Clips de 5 s, coût réduit.');
+const kling=pvid(['kwaivgI/kling-2.1-master'],'Kling 2.1 Master','Qualité cinéma, plus de crédits.');
+const vidu=pvid(['vidu/vidu-q1'],'Vidu Q1','Bonne qualité, bonne tenue du sujet.');
+const pdef=pvid([null],'Défaut Puter','Modèle vidéo par défaut de Puter.');
+const C={
+ text:{auto:null,list:[
+  ['Recommandé',ptext([null],'Puter par défaut')],
+  [Q,polltext],
+  [K,gem('gemini-2.5-flash','Gemini 2.5 Flash')],
+  [K,gem('gemini-2.5-flash-lite','Gemini 2.5 Flash-Lite')]]},
+ img:{list:[
+  ['Recommandé',pimg([null],'Défaut Puter','Le modèle choisi par Puter.')],
+  ['Réalisme et texte lisible',pimg(['gpt-image-1.5'],'GPT Image 1.5','Fidèle au prompt, texte lisible.',{quality:'low'})],
+  ['Réalisme et texte lisible',pimg(['gpt-image-1-mini'],'GPT Image Mini','Version économique.',{quality:'low'})],
+  ['Réalisme et texte lisible',pimg(['dall-e-3','openai/dall-e-3'],'DALL·E 3','Images soignées.')],
+  ['Créatif',pimg(['gemini-3-pro-image','gemini-3-pro-image-preview','gemini-3.1-flash-image-preview','gemini-2.5-flash-image-preview'],'Gemini Image','Créatif et cohérent.')],
+  ['Artistique',pimg(['stabilityai/stable-diffusion-3-medium'],'Stable Diffusion 3','Illustration, art numérique.')],
+  ['Rapide',pimg(['black-forest-labs/FLUX.1-schnell','black-forest-labs/flux-schnell'],'Flux Schnell','Très rapide.')],
+  [Q,pollimg('flux','Pollinations Flux','Une image toutes les 15 s environ.')],
+  [Q,pollimg('turbo','Pollinations Turbo','Plus rapide, qualité moindre.')]]},
+ vid:{list:[
+  ['Recommandé',pdef],
+  ['Économique',wan],
+  ['Qualité cinéma',kling],['Qualité cinéma',vidu],
+  [K,veo]]}
+};
+const AUTO={
+ text:()=>[C.text.list[0][1],polltext,...(gkey()?[C.text.list[2][1]]:[])],
+ img:()=>[C.img.list[0][1],C.img.list[7][1],C.img.list[8][1],C.img.list[6][1]],
+ vid:()=>[wan,pdef,vidu,kling,...(gkey()?[veo]:[])]
+};
+const AUTO_ENTRY={l:'Auto (essaie tout seul)',n:'Teste plusieurs services à la suite et n\'affiche une erreur que si tous échouent.',auto:1};
+Object.keys(C).forEach(t=>C[t].entries=[['Recommandé',AUTO_ENTRY]].concat(C[t].list));
+
+function build(t){
+  const s=$('m-'+t),groups={};s.innerHTML='';
+  C[t].entries.forEach(([g,m],i)=>{
+    if(!groups[g]){groups[g]=document.createElement('optgroup');groups[g].label=g;s.appendChild(groups[g])}
+    groups[g].appendChild(new Option(m.l,i));
+  });
+  const k=C[t].entries.findIndex(([,m])=>m.l===store('sel4-'+t));
+  s.value=k>=0?k:0;
+  const note=()=>{$('n-'+t).textContent=cur(t).n};
+  s.onchange=()=>{store('sel4-'+t,cur(t).l);note()};note();
+}
+const cur=t=>(C[t].entries[+$('m-'+t).value]||C[t].entries[0])[1];
+['text','img','vid'].forEach(build);
+
+if(hasPuter()&&puter.ai.listModels){
   puter.ai.listModels().then(list=>{
-    const ids=new Set();
-    list.forEach(x=>{ids.add(x.id);(x.aliases||[]).forEach(a=>ids.add(a))});
-    const rest=MODELS.text.filter(m=>m.p!=='chat');
-    const cur=MODELS.text.filter(m=>m.p==='chat').map(m=>{const f=m.ids.find(i=>ids.has(i));return f?Object.assign({},m,{ids:[f]}):null}).filter(Boolean);
-    const used=new Set(cur.map(m=>m.ids[0]));
-    const others=list.filter(x=>!used.has(x.id)&&!/embed|moderation|tts|whisper|image|audio|vision-only/i.test(x.id))
-      .sort((a,b)=>String(a.provider).localeCompare(String(b.provider)))
-      .slice(0,80)
-      .map(x=>({g:'Autres modèles ('+(x.provider||'divers')+')',p:'chat',ids:[x.id],l:x.name||x.id,n:'Modèle '+(x.provider||'')+' disponible sur Puter.'}));
-    if(cur.length+others.length){MODELS.text=cur.concat(others,rest);buildSelect('text')}
+    const fav=/gpt-5|deepseek-chat|qwen3|kimi-k2|claude|gemini-2\.5-flash$/i;
+    const ok=x=>!/embed|moderation|tts|whisper|image|audio|video/i.test(x.id);
+    const ents=list.filter(ok).sort((a,b)=>String(a.provider).localeCompare(String(b.provider)));
+    const star=ents.filter(x=>fav.test(x.id)).slice(0,8).map(x=>['Puter : recommandés',ptext([x.id],x.name||x.id)]);
+    const used=new Set(star.map(e=>e[1].l));
+    const rest=ents.filter(x=>!used.has(x.name||x.id)).slice(0,70).map(x=>['Puter : '+(x.provider||'divers'),ptext([x.id],x.name||x.id)]);
+    C.text.list=[C.text.list[0],...star,...rest,C.text.list[1],C.text.list[2],C.text.list[3]];
+    C.text.entries=[['Recommandé',AUTO_ENTRY]].concat(C.text.list);
+    AUTO.text=()=>[C.text.list[0][1],polltext,...(gkey()?[C.text.list[C.text.list.length-2][1]]:[])];
+    build('text');
   }).catch(()=>{});
 }
 
-async function tryIds(m,fn){
-  const list=m.ids||[m.id];let last;
-  for(const id of list){
-    try{return await fn(id)}catch(e){
-      const msg=String(e&&(e.message||(e.error&&e.error.message))||JSON.stringify(e));
-      last=e;
-      if(!/not found|unknown model|invalid model|no such model/i.test(msg))throw e;
-    }
-  }
-  throw new Error('Modèle indisponible sur Puter ('+String(last&&(last.message||(last.error&&last.error.message))||'')+'). Essaie « Défaut Puter » ou un autre modèle.');
-}
-function pick(t){return MODELS[t][+$('m-'+t).value]||MODELS[t][0]}
-
-$('key').value=store('gkey');
+/* ---------- interface ---------- */
+const tabs=['text','img','vid','set'];
+function show(n){tabs.forEach(t=>{$('p-'+t).hidden=t!==n;$('t-'+t).classList.toggle('on',t===n)});$('res').hidden=true}
+tabs.forEach(t=>$('t-'+t).onclick=()=>show(t));
+$('key').value=gkey();
 $('save').onclick=()=>{store('gkey',$('key').value.trim());$('save').textContent='Clé enregistrée'};
-
-const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-function out(html){$('res').hidden=false;$('out').innerHTML=html;$('res').scrollIntoView({behavior:'smooth'})}
-function fail(e){const m=e&&(e.message||(e.error&&e.error.message)||e.msg)||JSON.stringify(e);out('<span class="err">'+esc(m)+'</span>')}
-function needKey(m){if((m.p==='gem'||m.p==='veo')&&!store('gkey')){show('set');return true}return false}
-function needPuter(m){if(['chat','img','vid'].includes(m.p)&&typeof puter==='undefined'){fail('Puter ne se charge pas. Vérifie ta connexion.');return true}return false}
-function node(el){const o=$('out');o.innerHTML='';o.appendChild(el)}
-
-$('g-text').onclick=async()=>{
-  const m=pick('text'),p=$('i-text').value.trim();
-  if(!p||needKey(m)||needPuter(m))return;
-  const b=$('g-text');b.disabled=true;out('<span class="m">Génération…</span>');
-  try{
-    if(m.p==='chat'){
-      const r=await tryIds(m,id=>puter.ai.chat(p,{model:id}));
-      let t=typeof r==='string'?r:(r&&r.message&&r.message.content)||'';
-      if(Array.isArray(t))t=t.map(x=>x.text||'').join('');
-      if(!t)throw new Error('Réponse vide, essaie un autre modèle.');
-      out(esc(t));
-    }else if(m.p==='poll'){
-      const r=await fetch('https://text.pollinations.ai/'+encodeURIComponent(p));
-      if(!r.ok)throw new Error('Pollinations texte indisponible ('+r.status+'). Choisis un modèle Puter.');
-      out(esc(await r.text()));
-    }else{
-      const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+m.id+':generateContent',{
-        method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':store('gkey')},
-        body:JSON.stringify({contents:[{parts:[{text:p}]}]})});
-      const d=await r.json();
-      if(!r.ok)throw new Error(d.error&&d.error.message||'Erreur '+r.status);
-      out(esc(d.candidates[0].content.parts.map(x=>x.text||'').join('')));
-    }
-  }catch(e){fail(e)}
-  b.disabled=false;
+$('puter-login').onclick=async()=>{
+  try{puterBlocked=false;await puter.auth.signIn();$('puter-login').textContent='Connecté à Puter'}
+  catch(e){$('puter-login').textContent='Échec, réessaie (autorise les pop-ups)'}
 };
+function out(h){$('res').hidden=false;$('out').innerHTML=h;$('res').scrollIntoView({behavior:'smooth'})}
 
-$('g-img').onclick=async()=>{
-  const m=pick('img'),p=$('i-img').value.trim();
-  if(!p||needPuter(m))return;
-  const b=$('g-img');b.disabled=true;out('<span class="m">Génération (10 à 40 s)…</span>');
-  try{
-    if(m.p==='img'){
-      const im=await tryIds(m,id=>puter.ai.txt2img(p,Object.assign(id?{model:id}:{},m.o||{})));
-      node(im);
-    }else{
-      const u='https://image.pollinations.ai/prompt/'+encodeURIComponent(p)+'?width=1024&height=1024&nologo=true&model='+m.id+'&seed='+Math.floor(Math.random()*1e6);
-      await new Promise((ok,ko)=>{const im=new Image();im.onload=()=>{node(im);ok()};im.onerror=()=>ko(new Error('Pollinations est occupé. Réessaie dans 15 s ou choisis un modèle Puter.'));im.src=u});
-    }
-  }catch(e){fail(e)}
-  b.disabled=false;
-};
+function showResult(t,r,label,btn){
+  const o=$('out');o.innerHTML='';
+  if(r.text){
+    const d=document.createElement('div');d.textContent=r.text;o.appendChild(d);
+    const c=document.createElement('button');c.className='sec';c.textContent='Copier le texte';
+    c.onclick=()=>{try{navigator.clipboard.writeText(r.text);c.textContent='Copié'}catch(e){c.textContent='Copie impossible'}};o.appendChild(c);
+  }else{
+    o.appendChild(r.el);
+    if(r.src){const a=document.createElement('a');a.href=r.src;a.download=t==='vid'?'video.mp4':'image.png';a.target='_blank';a.className='sec';a.style.cssText='display:block;text-align:center;text-decoration:none;margin-top:8px;padding:10px;border:1px solid var(--acc);border-radius:10px;color:var(--acc)';a.textContent='Enregistrer';o.appendChild(a)}
+  }
+  const p=document.createElement('p');p.className='m';p.style.marginTop='8px';p.textContent='Généré avec : '+label;o.appendChild(p);
+  $('res').hidden=false;$('res').scrollIntoView({behavior:'smooth'});
+}
 
-$('g-vid').onclick=async()=>{
-  const m=pick('vid'),p=$('i-vid').value.trim();
-  if(!p||needKey(m)||needPuter(m))return;
-  const b=$('g-vid');b.disabled=true;out('<span class="m">Création en cours (1 à 5 min)…</span>');
-  try{
-    if(m.p==='vid'){
-      const v=await tryIds(m,id=>puter.ai.txt2vid(p,{model:id}));
-      v.controls=true;v.setAttribute('playsinline','');node(v);
-    }else{
-      const H={'Content-Type':'application/json','x-goog-api-key':store('gkey')};
-      const base='https://generativelanguage.googleapis.com/v1beta/';
-      let r=await fetch(base+'models/'+m.id+':predictLongRunning',{method:'POST',headers:H,body:JSON.stringify({instances:[{prompt:p}]})});
-      let d=await r.json();
-      if(!r.ok)throw new Error(d.error&&d.error.message||'Erreur '+r.status);
-      const name=d.name;
-      for(let i=0;i<60&&!d.done;i++){
-        await new Promise(s=>setTimeout(s,8000));
-        r=await fetch(base+name,{headers:H});d=await r.json();
-        if(!r.ok)throw new Error(d.error&&d.error.message||'Erreur '+r.status);
-      }
-      if(!d.done)throw new Error('Trop long, réessaie.');
-      if(d.error)throw new Error(d.error.message);
-      const uri=d.response.generateVideoResponse.generatedSamples[0].video.uri;
-      const v=await fetch(uri,{headers:{'x-goog-api-key':store('gkey')}});
-      if(!v.ok)throw new Error('Téléchargement impossible ('+v.status+')');
-      const el=document.createElement('video');el.controls=true;el.setAttribute('playsinline','');el.src=URL.createObjectURL(await v.blob());node(el);
-    }
-  }catch(e){fail(e)}
+async function generate(t){
+  const p=$('i-'+t).value.trim();if(!p)return;
+  const b=$('g-'+t),sel=cur(t);
+  const chain=sel.auto?AUTO[t]():[sel];
+  b.disabled=true;
+  const fails=[];
+  for(let i=0;i<chain.length;i++){
+    const m=chain[i];
+    if(m.key&&!gkey()){fails.push(m.l+' : ajoute ta clé Gemini dans Infos');continue}
+    if(m.puter&&puterBlocked){fails.push(m.l+' : connexion Puter annulée');continue}
+    out('<span class="m">'+(chain.length>1?'Essai '+(i+1)+'/'+chain.length+' : ':'')+esc(m.l)+'…</span>');
+    try{const r=await m.run(p);showResult(t,r,m.l);b.disabled=false;return}
+    catch(e){fails.push(m.l+' : '+human(e))}
+  }
+  const hint=fails.some(f=>/Puter annulée|annulée/.test(f))?'Connecte-toi à Puter dans l\'onglet Infos (autorise les pop-ups).':
+    fails.some(f=>/quota|crédits/.test(f))?'Les crédits gratuits sont épuisés : réessaie plus tard ou utilise un service sans compte.':
+    'Réessaie dans quelques secondes. Les services gratuits sont parfois saturés.';
+  out('<div class="warn"><b>Impossible de générer pour le moment.</b></div><p class="m" style="margin-top:6px">'+fails.map(esc).join('<br>')+'</p><p class="m" style="margin-top:8px">'+esc(hint)+'</p><button class="sec" id="retry">Réessayer</button>'+(sel.auto?'':'<button class="sec" id="auto">Passer en mode Auto</button>'));
+  $('retry').onclick=()=>generate(t);
+  if($('auto'))$('auto').onclick=()=>{$('m-'+t).value=0;store('sel4-'+t,AUTO_ENTRY.l);$('n-'+t).textContent=AUTO_ENTRY.n;generate(t)};
   b.disabled=false;
-};
+}
+['text','img','vid'].forEach(t=>$('g-'+t).onclick=()=>generate(t));
 </script>
 </body>
 </html>
