@@ -65,6 +65,10 @@ ol{margin:6px 0 0 18px;padding:0}
 .bn button.on{background:var(--gold);color:#1b2a3a}
 select,textarea,input{font-size:16px}
 .bn button{font-size:13px}
+.bn{backdrop-filter:blur(10px)}
+.dlg{position:fixed;inset:0;background:#000b;display:flex;align-items:flex-end;justify-content:center;z-index:60}
+.dbox{background:var(--s);border:2px solid var(--edge);border-radius:20px 20px 0 0;padding:18px;width:100%;max-width:560px;max-height:88vh;overflow:auto}
+#cbtn{position:fixed;top:10px;right:10px;z-index:30;padding:8px 14px;min-height:0;border-radius:999px;backdrop-filter:blur(8px)}
 .bub{max-width:90%;padding:10px 12px;border:2px solid var(--edge);border-radius:14px;margin-bottom:10px;box-shadow:0 2px 0 var(--edge)}
 .bub.u{margin-left:auto;background:var(--gold);color:#1b2a3a}
 .bub.a{background:var(--s)}
@@ -97,6 +101,13 @@ select,textarea,input{font-size:16px}
   </div>
   <div id="result"></div>
 </section>
+<button class="sec" id="cbtn">Connexions</button>
+<div class="dlg" id="dlg" hidden><div class="dbox">
+  <h3 style="margin-bottom:6px">Connexions</h3>
+  <p class="m" style="margin-bottom:12px">Connecte tes comptes pour utiliser leurs quotas gratuits quotidiens. Les clés restent dans ce navigateur.</p>
+  <div id="dlist"></div>
+  <button class="go" id="dclose" style="margin-top:8px">Fermer</button>
+</div></div>
 <section id="v-chat" hidden>
   <div class="acts" style="margin:0 0 12px"><select id="cm" style="flex:2;margin:0"></select><button class="sec" id="cnew">Nouveau chat</button></div>
   <div id="cmsgs"><p class="m" id="cempty">Pose ta première question : la conversation reste en mémoire jusqu'à « Nouveau chat ».</p></div>
@@ -275,6 +286,7 @@ const pollt=(model,l)=>({l,n:'Sans compte, qualité variable.',run:async p=>{
   if(!r.ok)throw new Error('indisponible '+r.status);const t=await r.text();if(!t.trim())throw new Error('réponse vide');return {text:t}}});
 const PT=[pollt('openai','Pollinations · OpenAI'),pollt('mistral','Pollinations · Mistral')];
 C.text.list.push(...PT.map(m=>[Q,m]),...KT);
+C.text.list.push(['Groq (quota quotidien)',oai('groq',GQ,'qwen/qwen3-32b','Groq · Qwen3 32B','Raisonnement. Clé Groq requise.')],['Groq (quota quotidien)',oai('groq',GQ,'llama-3.1-8b-instant','Groq · Llama 3.1 8B','Le plus rapide, gros quota. Clé Groq requise.')]);
 C.img.list.push(['Hugging Face (crédits gratuits)',hfimg],['Sans compte (file d\'attente)',horde]);
 const AUTO={
  text:()=>[C.text.list[0][1],polltext,...PT,...C.text.list.map(e=>e[1]).filter(m=>m.key&&hk(m))],
@@ -399,7 +411,8 @@ $('att').onchange=e=>{const f=e.target.files[0];if(!f)return;const fr=new FileRe
 $('attn').onclick=()=>{ATT=null;$('att').value='';$('attn').hidden=true};
 $('chatb').onclick=()=>{chatOn=!chatOn;hist=[];$('chatb').textContent='Chat suivi : '+(chatOn?'oui':'non')};
 const cool={};
-async function runR(m,q){try{return await m.run(q)}catch(e){const h=human(e);
+async function runR(m,q){const r=await runR0(m,q);bump(m);return r}
+async function runR0(m,q){try{return await m.run(q)}catch(e){const h=human(e);
   if(/quota/.test(h))cool[m.l]=Date.now()+9e5;
   if(/connexion/.test(h)){await new Promise(s=>setTimeout(s,1500));return await m.run(q)}
   throw e}}
@@ -468,6 +481,41 @@ async function csend(){
   CATT=null;$('catn').hidden=true;$('catt').value='';ATT=sA;ATTM=sM;VIS=false;b.disabled=false;
 }
 $('csend').onclick=csend;
+
+/* ---------- connexions ---------- */
+const udk='u-'+new Date().toISOString().slice(0,10);
+function bump(m){const u=JSON.parse(store(udk)||'{}');u[m.l]=(u[m.l]||0)+1;store(udk,JSON.stringify(u))}
+async function orLogin(){
+  const v=[...crypto.getRandomValues(new Uint8Array(32))].map(b=>b.toString(16).padStart(2,'0')).join('');
+  sessionStorage.setItem('orv',v);
+  const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v));
+  const c=btoa(String.fromCharCode(...new Uint8Array(h))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  location.href='https://openrouter.ai/auth?callback_url='+encodeURIComponent(location.origin+location.pathname)+'&code_challenge='+c+'&code_challenge_method=S256'}
+(async()=>{const code=new URLSearchParams(location.search).get('code'),v=sessionStorage.getItem('orv');
+  if(!code||!v)return;history.replaceState(null,'',location.pathname);sessionStorage.removeItem('orv');
+  try{const r=await fetch('https://openrouter.ai/api/v1/auth/keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,code_verifier:v,code_challenge_method:'S256'})});
+    const d=await r.json();if(!d.key)throw 0;store('k-openrouter',d.key);alert('OpenRouter connecté !')}catch(e){alert('Connexion OpenRouter échouée, réessaie.')}})();
+const PROV=[
+ {n:'Puter',d:'Dizaines de modèles texte, image et vidéo, avec les quotas gratuits de ton compte Puter.',on:()=>window.puter&&puter.auth&&puter.auth.isSignedIn(),login:async()=>{await ensurePuter();await puter.auth.signIn()}},
+ {n:'OpenRouter',d:'Connexion en un clic (Google ou GitHub possibles). Modèles gratuits, environ 50 requêtes par jour.',on:()=>!!store('k-openrouter'),login:orLogin},
+ {n:'Google Gemini',d:'Connecte-toi avec ton Gmail sur AI Studio, crée la clé, puis colle-la ici.',url:'https://aistudio.google.com/apikey',store:'gkey'},
+ {n:'Groq',d:'Connexion Google ou GitHub possible sur leur site. Colle ensuite la clé ici.',url:'https://console.groq.com/keys',store:'k-groq'},
+ {n:'Hugging Face',d:'Connexion Google possible. Crée un jeton avec le droit « Inference Providers ».',url:'https://huggingface.co/settings/tokens',store:'k-hf'}];
+function drawDlg(){const L=$('dlist');L.innerHTML='';
+  PROV.forEach(p=>{const on=p.on?!!p.on():!!store(p.store),d=mk('div','card');
+    const h=mk('div','');h.style.cssText='display:flex;justify-content:space-between;gap:8px';h.appendChild(mk('b','',p.n));
+    const b=mk('span','m',on?'Connecté':'Non connecté');if(on)b.style.color='#4caf50';h.appendChild(b);d.appendChild(h);d.appendChild(mk('p','m',p.d));
+    const a=mk('div','acts');
+    if(p.login){const x=mk('button','sec',on?'Reconnecter':'Se connecter');x.onclick=async()=>{try{await p.login()}catch(e){alert('Connexion impossible : '+(e.message||e))}drawDlg()};a.appendChild(x)}
+    if(p.url){const x=mk('button','sec','Ouvrir '+p.n.split(' ')[0]);x.onclick=()=>window.open(p.url,'_blank','noopener');a.appendChild(x)}
+    d.appendChild(a);
+    if(p.store){const i=mk('input');i.type='password';i.placeholder='Colle la clé ici';i.value=store(p.store)||'';i.onchange=()=>{store(p.store,i.value.trim());drawDlg()};d.appendChild(i)}
+    L.appendChild(d)});
+  const u=JSON.parse(store(udk)||'{}'),k=Object.keys(u);
+  L.appendChild(mk('p','m',k.length?'Utilisé aujourd\'hui : '+k.map(x=>x+' × '+u[x]).join(' · '):'Aucune requête aujourd\'hui.'))}
+$('cbtn').onclick=()=>{drawDlg();$('dlg').hidden=false};
+$('dclose').onclick=()=>{$('dlg').hidden=true};
+$('dlg').onclick=e=>{if(e.target.id==='dlg')$('dlg').hidden=true};
 
 /* ---------- historique ---------- */
 const fmt=ts=>new Date(ts).toLocaleString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
