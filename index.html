@@ -106,6 +106,10 @@ select,textarea,input{font-size:16px}
   <h3 style="margin-bottom:6px">Connexions</h3>
   <p class="m" style="margin-bottom:12px">Connecte tes comptes pour utiliser leurs quotas gratuits quotidiens. Les clés restent dans ce navigateur.</p>
   <div id="dlist"></div>
+  <div class="card"><b>Diagnostic</b>
+    <p class="m">Essaie chaque modèle un par un et dit lesquels marchent. Cela consomme un peu de quota ; les images AI Horde peuvent prendre quelques minutes.</p>
+    <div class="acts"><button class="sec" id="dtxt">Tester le texte</button><button class="sec" id="dimg">Tester les images</button><button class="sec" id="dcopy">Copier le rapport</button></div>
+    <div id="dres"></div></div>
   <button class="go" id="dclose" style="margin-top:8px">Fermer</button>
 </div></div>
 <section id="v-chat" hidden>
@@ -512,10 +516,30 @@ function drawDlg(){const L=$('dlist');L.innerHTML='';
     if(p.store){const i=mk('input');i.type='password';i.placeholder='Colle la clé ici';i.value=store(p.store)||'';i.onchange=()=>{store(p.store,i.value.trim());drawDlg()};d.appendChild(i)}
     L.appendChild(d)});
   const W=mk('div','card');W.appendChild(mk('b','','Mes comptes web'));W.appendChild(mk('p','m','Ces sites ne permettent pas de les utiliser depuis une autre page : ils s\'ouvrent dans un onglet, où tu te connectes avec ton compte (Gmail, Microsoft…).'));
-  const WA=mk('div','acts');[['ChatGPT','https://chatgpt.com'],['Copilot','https://copilot.microsoft.com'],['LMArena','https://lmarena.ai'],['Gemini (Gmail)','https://gemini.google.com']].forEach(([n,u])=>{const x=mk('button','sec',n);x.onclick=()=>window.open(u,'_blank','noopener');WA.appendChild(x)});
+  const WA=mk('div','acts');[['ChatGPT','https://chatgpt.com'],['Copilot','https://copilot.microsoft.com'],['LMArena','https://lmarena.ai'],['Gemini','https://gemini.google.com']].forEach(([n,u])=>{const x=mk('button','sec',n);x.onclick=()=>window.open(u,'_blank','noopener');WA.appendChild(x)});
   W.appendChild(WA);L.appendChild(W);
   const u=JSON.parse(store(udk)||'{}'),k=Object.keys(u);
   L.appendChild(mk('p','m',k.length?'Utilisé aujourd\'hui : '+k.map(x=>x+' × '+u[x]).join(' · '):'Aucune requête aujourd\'hui.'))}
+let dRun=false,dLines=[];
+async function diag(t,b){
+  if(dRun){dRun=false;return}
+  dRun=true;const o=b.textContent;b.textContent='Arrêter';$('dres').innerHTML='';dLines=[];
+  for(const [,m] of C[t].list){
+    if(!dRun)break;
+    const row=mk('p','m','… '+m.l);$('dres').appendChild(row);let msg;
+    if(m.key&&!hk(m))msg='– '+m.l+' : clé manquante';
+    else if(m.puter&&puterBlocked)msg='– '+m.l+' : Puter non connecté';
+    else{const t0=Date.now();
+      try{const r=await m.run(t==='text'?'Réponds uniquement par le mot OK.':'un petit chat rouge, dessin simple');
+        if(t==='text'&&!String(r.text||'').trim())throw new Error('réponse vide');
+        msg='✓ '+m.l+' ('+((Date.now()-t0)/1000).toFixed(1)+' s)'}
+      catch(e){let raw='';try{raw=String(e&&(e.message||(e.error&&e.error.message))||e)}catch(_){}
+        msg='✗ '+m.l+' : '+human(e)+(raw&&raw.slice(0,70)!==human(e)?' ['+raw.slice(0,70)+']':'')}}
+    row.textContent=msg;dLines.push(msg)}
+  dRun=false;b.textContent=o}
+$('dtxt').onclick=()=>diag('text',$('dtxt'));
+$('dimg').onclick=()=>diag('img',$('dimg'));
+$('dcopy').onclick=async()=>{try{await navigator.clipboard.writeText(dLines.join('\n')||'Aucun test lancé.');$('dcopy').textContent='Copié !'}catch(e){$('dcopy').textContent='Copie impossible'}setTimeout(()=>$('dcopy').textContent='Copier le rapport',1500)};
 $('cbtn').onclick=()=>{drawDlg();$('dlg').hidden=false};
 $('dclose').onclick=()=>{$('dlg').hidden=true};
 $('dlg').onclick=e=>{if(e.target.id==='dlg')$('dlg').hidden=true};
