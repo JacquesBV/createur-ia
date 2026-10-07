@@ -511,6 +511,9 @@ function drawDlg(){const L=$('dlist');L.innerHTML='';
     d.appendChild(a);
     if(p.store){const i=mk('input');i.type='password';i.placeholder='Colle la clé ici';i.value=store(p.store)||'';i.onchange=()=>{store(p.store,i.value.trim());drawDlg()};d.appendChild(i)}
     L.appendChild(d)});
+  const W=mk('div','card');W.appendChild(mk('b','','Mes comptes web'));W.appendChild(mk('p','m','Ces sites ne permettent pas de les utiliser depuis une autre page : ils s\'ouvrent dans un onglet, où tu te connectes avec ton compte (Gmail, Microsoft…).'));
+  const WA=mk('div','acts');[['ChatGPT','https://chatgpt.com'],['Copilot','https://copilot.microsoft.com'],['LMArena','https://lmarena.ai'],['Gemini (Gmail)','https://gemini.google.com']].forEach(([n,u])=>{const x=mk('button','sec',n);x.onclick=()=>window.open(u,'_blank','noopener');WA.appendChild(x)});
+  W.appendChild(WA);L.appendChild(W);
   const u=JSON.parse(store(udk)||'{}'),k=Object.keys(u);
   L.appendChild(mk('p','m',k.length?'Utilisé aujourd\'hui : '+k.map(x=>x+' × '+u[x]).join(' · '):'Aucune requête aujourd\'hui.'))}
 $('cbtn').onclick=()=>{drawDlg();$('dlg').hidden=false};
