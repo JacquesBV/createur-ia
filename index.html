@@ -233,10 +233,10 @@ const veo={l:'Veo 3 Fast (payant)',n:'Clé Gemini avec facturation requise.',key
   if(!v.ok)throw new Error('téléchargement impossible');
   const el=document.createElement('video');el.controls=true;el.setAttribute('playsinline','');el.src=URL.createObjectURL(await v.blob());return {el,src:el.src}}};
 
-const KEYS={groq:['Groq','console.groq.com/keys'],openrouter:['OpenRouter','openrouter.ai/keys'],hf:['Hugging Face','huggingface.co/settings/tokens (droit Inference Providers)']};
+const KEYS={groq:['Groq','console.groq.com/keys'],github:['GitHub Models','github.com/settings/personal-access-tokens (droit Models)'],sambanova:['SambaNova','cloud.sambanova.ai/apis'],cohere:['Cohere','dashboard.cohere.com/api-keys'],siliconflow:['SiliconFlow','cloud.siliconflow.com/account/ak'],openrouter:['OpenRouter','openrouter.ai/keys'],hf:['Hugging Face','huggingface.co/settings/tokens (droit Inference Providers)']};
 const hk=m=>m.key===1?gkey():store('k-'+m.key);
 const oai=(kid,url,model,l,n)=>({l,n,key:kid,run:async p=>{
-  const r=await wait(60000,fetch(url,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+store('k-'+kid)},body:JSON.stringify({model,messages:[{role:'user',content:p}]})}));
+  const r=await wait(60000,fetch(url,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+(store('k-'+kid)||'unused')},body:JSON.stringify({model,messages:[{role:'user',content:p}]})}));
   const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error((d.error&&d.error.message)||'erreur '+r.status);
   const t=d.choices&&d.choices[0].message.content;if(!t)throw new Error('réponse vide');return {text:t}}});
 const loadImg=u=>new Promise((ok,ko)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>ko(new Error('image invalide'));i.src=u});
@@ -288,9 +288,16 @@ const GQ='https://api.groq.com/openai/v1/chat/completions',KT=[
 const pollt=(model,l)=>({l,n:'Sans compte, qualité variable.',run:async p=>{
   const r=await wait(60000,fetch('https://text.pollinations.ai/'+encodeURIComponent(p)+'?model='+model));
   if(!r.ok)throw new Error('indisponible '+r.status);const t=await r.text();if(!t.trim())throw new Error('réponse vide');return {text:t}}});
-const PT=[pollt('openai','Pollinations · OpenAI'),pollt('mistral','Pollinations · Mistral')];
+const PT=[pollt('openai','Pollinations · OpenAI'),pollt('mistral','Pollinations · Mistral'),Object.assign(oai('llm7','https://api.llm7.io/v1/chat/completions','default','LLM7 · Auto','Sans compte ni clé, projet communautaire.'),{key:0})];
 C.text.list.push(...PT.map(m=>[Q,m]),...KT);
 C.text.list.push(['Groq (quota quotidien)',oai('groq',GQ,'qwen/qwen3-32b','Groq · Qwen3 32B','Raisonnement. Clé Groq requise.')],['Groq (quota quotidien)',oai('groq',GQ,'llama-3.1-8b-instant','Groq · Llama 3.1 8B','Le plus rapide, gros quota. Clé Groq requise.')]);
+C.text.list.push(
+ ['GitHub Models (gratuit)',oai('github','https://models.github.ai/inference/chat/completions','openai/gpt-4.1-mini','GitHub · GPT-4.1 mini','Jeton GitHub requis, quota quotidien.')],
+ ['GitHub Models (gratuit)',oai('github','https://models.github.ai/inference/chat/completions','meta/Llama-3.3-70B-Instruct','GitHub · Llama 3.3 70B','Jeton GitHub requis, quota quotidien.')],
+ ['SambaNova (20 requêtes/jour)',oai('sambanova','https://api.sambanova.ai/v1/chat/completions','Meta-Llama-3.3-70B-Instruct','SambaNova · Llama 3.3 70B','Rapide. Clé SambaNova requise.')],
+ ['SambaNova (20 requêtes/jour)',oai('sambanova','https://api.sambanova.ai/v1/chat/completions','gpt-oss-120b','SambaNova · GPT-OSS 120B','Clé SambaNova requise.')],
+ ['Cohere (1000 appels/mois)',oai('cohere','https://api.cohere.ai/compatibility/v1/chat/completions','command-a-03-2025','Cohere · Command A','Clé d\'essai Cohere requise.')],
+ ['SiliconFlow (gratuit)',oai('siliconflow','https://api.siliconflow.com/v1/chat/completions','Qwen/Qwen3-8B','SiliconFlow · Qwen3 8B','Clé SiliconFlow requise.')]);
 C.img.list.push(['Hugging Face (crédits gratuits)',hfimg],['Sans compte (file d\'attente)',horde]);
 const AUTO={
  text:()=>[C.text.list[0][1],polltext,...PT,...C.text.list.map(e=>e[1]).filter(m=>m.key&&hk(m))],
@@ -504,7 +511,11 @@ const PROV=[
  {n:'OpenRouter',d:'Connexion en un clic (Google ou GitHub possibles). Modèles gratuits, environ 50 requêtes par jour.',on:()=>!!store('k-openrouter'),login:orLogin},
  {n:'Google Gemini',d:'Connecte-toi avec ton Gmail sur AI Studio, crée la clé, puis colle-la ici.',url:'https://aistudio.google.com/apikey',store:'gkey'},
  {n:'Groq',d:'Connexion Google ou GitHub possible sur leur site. Colle ensuite la clé ici.',url:'https://console.groq.com/keys',store:'k-groq'},
- {n:'Hugging Face',d:'Connexion Google possible. Crée un jeton avec le droit « Inference Providers ».',url:'https://huggingface.co/settings/tokens',store:'k-hf'}];
+ {n:'Hugging Face',d:'Connexion Google possible. Crée un jeton avec le droit « Inference Providers ».',url:'https://huggingface.co/settings/tokens',store:'k-hf'},
+ {n:'GitHub Models',d:'Connexion avec ton compte GitHub. Crée un jeton avec le droit « Models » (lecture).',url:'https://github.com/settings/personal-access-tokens/new',store:'k-github'},
+ {n:'SambaNova',d:'Gratuit sans carte (20 requêtes par jour). Connexion Google possible.',url:'https://cloud.sambanova.ai/apis',store:'k-sambanova'},
+ {n:'Cohere',d:'Clé d\'essai gratuite, 1000 appels par mois. Connexion Google possible.',url:'https://dashboard.cohere.com/api-keys',store:'k-cohere'},
+ {n:'SiliconFlow',d:'Quelques modèles gratuits. Une vérification par téléphone peut être demandée.',url:'https://cloud.siliconflow.com/account/ak',store:'k-siliconflow'}];
 function drawDlg(){const L=$('dlist');L.innerHTML='';
   PROV.forEach(p=>{const on=p.on?!!p.on():!!store(p.store),d=mk('div','card');
     const h=mk('div','');h.style.cssText='display:flex;justify-content:space-between;gap:8px';h.appendChild(mk('b','',p.n));
