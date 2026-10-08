@@ -93,6 +93,7 @@ details.opt .acts{margin:6px 0 12px}
 #toagent small{display:block;font-family:'Sora',system-ui,sans-serif;font-size:12px;color:var(--mut);letter-spacing:0}
 #xsrc{display:flex;flex-wrap:wrap;gap:6px 14px}
 #xsrc label{margin:0;display:inline-flex!important;align-items:center;font-size:13px}
+.back{position:sticky;top:env(safe-area-inset-top,0px);z-index:8;margin:0 0 10px;font-size:17px;background:var(--gold);color:#1b2a3a}
 </style>
 </head>
 <body>
@@ -134,6 +135,7 @@ details.opt .acts{margin:6px 0 12px}
   <button class="go" id="dclose" style="margin-top:8px">Fermer</button>
 </div></div>
 <section id="v-explore" hidden>
+  <button class="sec back">← Retour à Créer</button>
   <h2 class="pt">Explorer</h2>
   <p class="ph">Cherche de l'inspiration : images générées par IA ou modèles à télécharger.</p>
   <div class="card"><b>Que cherches-tu ?</b>
@@ -156,6 +158,7 @@ details.opt .acts{margin:6px 0 12px}
   <button class="sec" id="xmore" hidden style="width:100%">Voir plus</button>
 </section>
 <section id="v-chat" hidden>
+  <button class="sec back">← Retour à Créer</button>
   <h2 class="pt">Chat</h2>
   <p class="ph">Discute avec l'IA : elle se souvient de la conversation.</p>
   <div class="acts" style="margin:0 0 12px"><select id="cm" style="flex:2;margin:0"></select><button class="sec" id="cnew">Nouveau chat</button></div>
@@ -178,6 +181,7 @@ details.opt .acts{margin:6px 0 12px}
   <div id="alog"></div>
 </section>
 <section id="v-hist" hidden>
+  <button class="sec back">← Retour à Créer</button>
   <h2 class="pt">Historique</h2>
   <p class="ph">Tout ce que tu as demandé, du plus récent au plus ancien.</p>
 <div class="chips lib" style="margin-bottom:10px"><button data-go="files">Mes créations</button><button class="on" data-go="hist">Historique</button></div>
@@ -186,6 +190,7 @@ details.opt .acts{margin:6px 0 12px}
   <button class="sec" id="hclear" style="width:100%">Tout effacer</button>
 </section>
 <section id="v-files" hidden>
+  <button class="sec back">← Retour à Créer</button>
   <h2 class="pt">Mes créations</h2>
   <p class="ph">Tes textes, images, vidéos et pages enregistrés.</p>
 <div class="chips lib" style="margin-bottom:10px"><button class="on" data-go="files">Mes créations</button><button data-go="hist">Historique</button></div>
@@ -193,6 +198,7 @@ details.opt .acts{margin:6px 0 12px}
   <div class="grid" id="fgrid"></div>
 </section>
 <section id="v-set" hidden>
+  <button class="sec back">← Retour à Créer</button>
   <h2 class="pt">Réglages</h2>
   <p class="ph">Comptes et clés : à faire une seule fois.</p>
   <div class="card">
@@ -484,6 +490,7 @@ const VIEWS=['create','chat','agent','hist','files','explore','set'];
 function go(v){VIEWS.forEach(x=>{$('v-'+x).hidden=x!==v;$('nb-'+x).classList.toggle('on',x===({hist:'files',agent:'create'}[v]||v))});if(v==='hist')renderHist();if(v==='files')renderFiles();if(v==='chat')buildChat();if(v==='explore'&&!$('xres').children.length)xsearch();window.scrollTo(0,0)}
 VIEWS.forEach(v=>$('nb-'+v).onclick=()=>go(v));
 $('toagent').onclick=()=>go('agent');$('fromagent').onclick=()=>go('create');
+document.querySelectorAll('.back').forEach(b=>b.onclick=()=>go('create'));
 document.querySelectorAll('.lib button').forEach(b=>b.onclick=()=>go(b.dataset.go));
 let ctype='text';
 const PH={text:'Écris ce que tu veux générer…',img:'Décris l\'image (l\'anglais donne de meilleurs résultats)…',vid:'Décris la vidéo (l\'anglais donne de meilleurs résultats). Compte 1 à 5 minutes.'};
