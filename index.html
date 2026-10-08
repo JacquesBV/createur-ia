@@ -294,7 +294,7 @@ const veo={l:'Veo 3 Fast (payant)',n:'Clé Gemini avec facturation requise.',key
   if(!v.ok)throw new Error('téléchargement impossible');
   const el=document.createElement('video');el.controls=true;el.setAttribute('playsinline','');el.src=URL.createObjectURL(await v.blob());return {el,src:el.src}}};
 
-const KEYS={pixabay:['Pixabay (images)','pixabay.com/api/docs'],groq:['Groq','console.groq.com/keys'],segmind:['Segmind (images)','cloud.segmind.com/console/api-keys'],github:['GitHub Models','github.com/settings/personal-access-tokens (droit Models)'],sambanova:['SambaNova','cloud.sambanova.ai/apis'],cohere:['Cohere','dashboard.cohere.com/api-keys'],siliconflow:['SiliconFlow','cloud.siliconflow.com/account/ak'],openrouter:['OpenRouter','openrouter.ai/keys'],hf:['Hugging Face','huggingface.co/settings/tokens (droit Inference Providers)']};
+const KEYS={agnes:['Agnes AI','platform.agnes-ai.com'],cloudflare:['Cloudflare Workers AI (ID_COMPTE:JETON, ou URL de ton Worker)','dash.cloudflare.com/profile/api-tokens'],pixabay:['Pixabay (images)','pixabay.com/api/docs'],groq:['Groq','console.groq.com/keys'],segmind:['Segmind (images)','cloud.segmind.com/console/api-keys'],github:['GitHub Models','github.com/settings/personal-access-tokens (droit Models)'],sambanova:['SambaNova','cloud.sambanova.ai/apis'],cohere:['Cohere','dashboard.cohere.com/api-keys'],siliconflow:['SiliconFlow','cloud.siliconflow.com/account/ak'],openrouter:['OpenRouter','openrouter.ai/keys'],hf:['Hugging Face','huggingface.co/settings/tokens (droit Inference Providers)']};
 const hk=m=>m.key===1?gkey():store('k-'+m.key);
 const oai=(kid,url,model,l,n)=>({l,n,key:kid,run:async p=>{
   const r=await wait(60000,fetch(url,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+(store('k-'+kid)||'unused')},body:JSON.stringify({model,messages:[{role:'user',content:p}]})}));
@@ -322,6 +322,22 @@ const gimg={l:'Gemini Image (Google)',n:'Clé Gemini requise. Le gratuit dépend
   const x=d.candidates[0].content.parts.find(z=>z.inlineData||z.inline_data),i=x&&(x.inlineData||x.inline_data);if(!i)throw new Error('aucune image');
   const u='data:'+(i.mimeType||i.mime_type||'image/png')+';base64,'+i.data;return {el:await loadImg(u),src:u}}};
 
+const agnimg={l:'Agnes Image 2.5 Flash',n:'Clé Agnes AI requise, gratuit pour le moment.',key:'agnes',run:async p=>{
+  const r=await wait(120000,fetch('https://apihub.agnes-ai.com/v1/images/generations',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+store('k-agnes')},body:JSON.stringify({model:'agnes-image-2.5-flash',prompt:p,size:'1K',ratio:'1:1',return_base64:true})}));
+  const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error((d.error&&d.error.message)||d.message||'erreur '+r.status);
+  const g=d.data&&d.data[0];if(!g)throw new Error('aucune image');
+  const u=g.b64_json?'data:image/png;base64,'+g.b64_json:g.url;if(!u)throw new Error('aucune image');
+  return {el:await loadImg(u),src:u}}};
+const cfimg={l:'FLUX.2 Klein (Cloudflare)',n:'Cloudflare Workers AI : ID_COMPTE:JETON, ou URL d\'un Worker relais.',key:'cloudflare',run:async p=>{
+  const v=store('k-cloudflare').trim(),fd=new FormData(),H={};
+  fd.append('prompt',p);fd.append('width','1024');fd.append('height','1024');
+  let url=v;
+  if(!/^https?:\/\//.test(v)){const i=v.indexOf(':');if(i<1)throw new Error('format attendu : ID_COMPTE:JETON');
+    url='https://api.cloudflare.com/client/v4/accounts/'+v.slice(0,i).trim()+'/ai/run/@cf/black-forest-labs/flux-2-klein-4b';H.Authorization='Bearer '+v.slice(i+1).trim()}
+  let r;try{r=await wait(90000,fetch(url,{method:'POST',headers:H,body:fd}))}catch(e){if(e instanceof TypeError)throw new Error('Cloudflare bloque l\'appel direct (CORS) : utilise un Worker relais');throw e}
+  const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error((d.errors&&d.errors[0]&&d.errors[0].message)||d.error||'erreur '+r.status);
+  const b=(d.result&&d.result.image)||d.image;if(!b)throw new Error('aucune image');
+  const u='data:image/png;base64,'+b;return {el:await loadImg(u),src:u}}};
 /* ---------- catalogue ---------- */
 const P='Puter (compte gratuit)',Q='Sans compte (Pollinations)',K='Avec clé Gemini';
 const wan=pvid(['wan-ai/wan2.2-t2v-a14b'],'Wan 2.2','Clips de 5 s, coût réduit.');
@@ -368,6 +384,8 @@ C.text.list.push(
  ['SambaNova (20 requêtes/jour)',oai('sambanova','https://api.sambanova.ai/v1/chat/completions','gpt-oss-120b','SambaNova · GPT-OSS 120B','Clé SambaNova requise.')],
  ['Cohere (1000 appels/mois)',oai('cohere','https://api.cohere.ai/compatibility/v1/chat/completions','command-a-03-2025','Cohere · Command A','Clé d\'essai Cohere requise.')],
  ['SiliconFlow (gratuit)',oai('siliconflow','https://api.siliconflow.com/v1/chat/completions','Qwen/Qwen3-8B','SiliconFlow · Qwen3 8B','Clé SiliconFlow requise.')]);
+C.text.list.push(['Agnes AI (gratuit)',oai('agnes','https://apihub.agnes-ai.com/v1/chat/completions','agnes-3.0-flash','Agnes 3.0 Flash','Clé Agnes AI requise, gratuit pour le moment.')]);
+C.img.list.push(['Agnes AI (gratuit)',agnimg],['Cloudflare Workers AI',cfimg]);
 C.img.list.push(['Hugging Face (crédits gratuits)',hfimg],['Sans compte (file d\'attente)',horde]);
 const HG='Hugging Face (crédits gratuits)',PG='Plus de modèles Puter';
 C.img.list.push(
@@ -665,6 +683,8 @@ const PROV=[
  {n:'OpenRouter',d:'Connexion en un clic (Google ou GitHub possibles). Modèles gratuits, environ 50 requêtes par jour.',on:()=>!!store('k-openrouter'),login:orLogin},
  {n:'Google Gemini',d:'Connecte-toi avec ton Gmail sur AI Studio, crée la clé, puis colle-la ici.',url:'https://aistudio.google.com/apikey',store:'gkey'},
  {n:'Groq',d:'Connexion Google ou GitHub possible sur leur site. Colle ensuite la clé ici.',url:'https://console.groq.com/keys',store:'k-groq'},
+ {n:'Agnes AI',d:'Texte (Agnes 3.0 Flash) et images, gratuits pour le moment. Crée un compte puis une clé API.',url:'https://platform.agnes-ai.com/',store:'k-agnes'},
+ {n:'Cloudflare',d:'FLUX.2 Klein via Workers AI. Colle ID_COMPTE:JETON, ou l\'URL de ton Worker relais.',url:'https://dash.cloudflare.com/profile/api-tokens',store:'k-cloudflare'},
  {n:'Hugging Face',d:'Connexion Google possible. Crée un jeton avec le droit « Inference Providers ».',url:'https://huggingface.co/settings/tokens',store:'k-hf'},
  {n:'Segmind',d:'Images SDXL avec des crédits gratuits quotidiens. Connexion Google possible.',url:'https://cloud.segmind.com/console/api-keys',store:'k-segmind'},
  {n:'Pixabay',d:'Clé gratuite pour chercher des images dans Explorer (connexion Google possible).',url:'https://pixabay.com/api/docs/',store:'k-pixabay'},
